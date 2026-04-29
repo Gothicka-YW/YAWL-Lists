@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "YoBoards",
+  "version": "0.1.0",
+  "description": "YoWorld lists + board builder with user-selectable popup or side panel launch.",
+  "action": {
+    "default_title": "YoBoards",
+    "default_icon": {
+      "16": "Icons/16x16.png",
+      "32": "Icons/32x32.png",
+      "48": "Icons/48x48.png",
+      "128": "Icons/128x128.png"
+    }
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "Icons/16x16.png",
+    "32": "Icons/32x32.png",
+    "48": "Icons/48x48.png",
+    "128": "Icons/128x128.png"
+  },
+  "permissions": [
+    "storage",
+    "sidePanel",
+    "windows"
+  ],
+  "host_permissions": [
+    "https://api.yoworld.info/*",
+    "https://yw-web.yoworld.com/*",
+    "https://yoworld.info/*"
+  ]
+}

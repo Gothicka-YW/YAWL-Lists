@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Download Nunito Font</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+    h1 { color: #2563eb; }
+    .step { background: #f0f9ff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; }
+    .step h3 { margin: 0 0 10px 0; color: #1e40af; }
+    code { background: #e0e7ff; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+    a { color: #2563eb; }
+    .success { background: #f0fdf4; border-left: 4px solid #16a34a; }
+    .success h3 { color: #166534; }
+    ul { margin: 10px 0; }
+    li { margin: 8px 0; }
+  </style>
+</head>
+<body>
+  <h1>📥 Setup Nunito Font for YoInventory Suite</h1>
+  
+  <div class="step">
+    <h3>Step 1: Download Nunito from Google Fonts</h3>
+    <p>Click this link to download Nunito:</p>
+    <p><a href="https://fonts.google.com/download?family=Nunito" target="_blank" rel="noopener">
+      🔗 Download Nunito Font (Google Fonts Direct Link)
+    </a></p>
+    <p><em>Alternative:</em> Visit <a href="https://fonts.google.com/specimen/Nunito" target="_blank">fonts.google.com/specimen/Nunito</a>, click "Get font" → "Download all"</p>
+  </div>
+
+  <div class="step">
+    <h3>Step 2: Extract the ZIP</h3>
+    <p>Open the downloaded <code>Nunito.zip</code> file and extract it to a folder.</p>
+  </div>
+
+  <div class="step">
+    <h3>Step 3: Copy Required Fonts</h3>
+    <p>From the extracted folder, navigate to <code>Nunito/static/</code> and copy these 3 files to your extension's <code>fonts/</code> directory:</p>
+    <ul>
+      <li><code>Nunito-Regular.ttf</code></li>
+      <li><code>Nunito-SemiBold.ttf</code></li>
+      <li><code>Nunito-Bold.ttf</code></li>
+    </ul>
+    <p>Full path: <code>YoInventory_Suite/fonts/</code></p>
+  </div>
+
+  <div class="success">
+    <h3>✅ You're Done!</h3>
+    <p>Once the 3 font files are in the <code>fonts/</code> folder:</p>
+    <ol>
+      <li>Reload your Chrome extension</li>
+      <li>Open YoInventory Suite</li>
+      <li>Export a PNG to see the new rounded, friendly Nunito font!</li>
+    </ol>
+  </div>
+
+  <hr style="margin: 40px 0; border: none; border-top: 1px solid #e5e7eb;">
+
+  <details>
+    <summary><strong>Optional: Convert to WOFF2 (smaller file size)</strong></summary>
+    <p style="margin-top: 10px;">If you want smaller file sizes, you can convert the TTF files to WOFF2:</p>
+    <ol>
+      <li>Go to <a href="https://cloudconvert.com/ttf-to-woff2" target="_blank">cloudconvert.com/ttf-to-woff2</a></li>
+      <li>Upload each TTF file</li>
+      <li>Download the converted WOFF2 files</li>
+      <li>Place them in <code>fonts/</code> alongside the TTF files (both formats are supported)</li>
+    </ol>
+  </details>
+
+</body>
+</html>

@@ -1,0 +1,431 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>YoBoards</title>
+  <link rel="stylesheet" href="fonts.css">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body data-page="sidepanel" data-surface="popup">
+  <nav class="suite-nav" aria-label="Suite modules">
+    <button id="suite-nav-selection" class="suite-tab is-active" type="button" data-suite-module="selection">Lists</button>
+    <button id="suite-nav-boardbuilder" class="suite-tab" type="button" data-suite-module="boardbuilder">Board Builder</button>
+    <button id="suite-nav-settings" class="suite-tab" type="button" data-suite-module="settings">Settings</button>
+  </nav>
+
+  <div id="suite-selection">
+  <header class="header">
+    <div>
+      <h1>YoLists</h1>
+      <div class="sub">YoBoards • Lists • Exports PNG</div>
+      <div id="export-preview-summary" class="hint export-preview-summary" aria-live="polite"></div>
+      <button id="btn-export" class="primary lists-export-primary" type="button">Export PNG</button>
+    </div>
+    <div class="export-controls">
+      <div class="inline export-controls-row">
+        <select id="export-scope" aria-label="Export scope">
+          <option value="active">Current tab</option>
+          <option value="all">All lists</option>
+          <option value="wish">Wish List</option>
+          <option value="npc">NPC</option>
+          <option value="sell">Sell</option>
+          <option value="hair">Hair</option>
+          <option value="sellSets">Sets</option>
+          <option value="buy">Buy</option>
+          <option value="pdeSlots">PDE/Slots</option>
+          <option value="furns">Furns</option>
+          <option value="pricecheck">Price Check</option>
+          <option value="fantasy">Fantasy</option>
+        </select>
+        <select id="export-preset" aria-label="Export preset">
+          <option value="forum-wishlist">Preset: Forums Wishlist</option>
+          <option value="forum-standard" selected>Preset: Standard</option>
+          <option value="archive">Preset: Archive</option>
+        </select>
+      </div>
+      <div id="export-advanced-controls" class="inline export-controls-row">
+        <select id="export-wish-pagesize" aria-label="Items per image">
+          <option value="8">8 per image</option>
+          <option value="20">20 per image</option>
+          <option value="25" selected>25 per image</option>
+          <option value="35">35 per image</option>
+          <option value="50">50 per image</option>
+        </select>
+        <select id="export-item-limit" aria-label="Export item limit per list">
+          <option value="0" selected>All items</option>
+          <option value="25">First 25</option>
+          <option value="50">First 50</option>
+        </select>
+        <select id="export-scale" aria-label="Export scale">
+          <option value="85">Scale 85%</option>
+          <option value="100" selected>Scale 100%</option>
+          <option value="115">Scale 115%</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <section class="card">
+    <h2>Add item</h2>
+    <div class="row">
+      <label class="lbl">Section</label>
+      <select id="in-section">
+        <option value="wish">Wish List</option>
+        <option value="npc">NPC</option>
+        <option value="sell">Sell</option>
+        <option value="hair">Hair</option>
+        <option value="sellSets">Sets</option>
+        <option value="buy">Buy</option>
+        <option value="pdeSlots">PDE/Slots</option>
+        <option value="furns">Furns</option>
+        <option value="pricecheck">Price Check</option>
+        <option value="fantasy">Fantasy</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <label class="lbl">Search</label>
+      <div class="inline">
+        <input id="in-query" type="text" placeholder="Type an item name...">
+        <button id="btn-search" type="button">Search</button>
+        <button id="btn-search-clear" class="ghost" type="button" title="Clear search">Clear</button>
+      </div>
+      <div class="hint">Uses api.yoworld.info search (manual use only).</div>
+    </div>
+
+    <div class="row">
+      <label class="lbl">Note (optional)</label>
+      <input id="in-note" type="text" placeholder="e.g., 2.5m, swap for..., any color">
+    </div>
+
+    <div id="results" class="results"></div>
+
+    <div id="results-pager" class="inline" hidden>
+      <button id="btn-results-prev" class="ghost" type="button">← Prev</button>
+      <div id="results-page-label" aria-live="polite">Page 1 / 1</div>
+      <button id="btn-results-next" class="ghost" type="button">Next →</button>
+    </div>
+
+    <div id="drop-zone" class="dropzone" aria-label="Drop YoWorld.info link">
+      Drop a YoWorld.info item link here to add it
+    </div>
+  </section>
+
+  <nav class="tabs" aria-label="Template Sections">
+    <div class="tab-scroll-area"></div>
+    <select id="sel-tab-manage" title="Manage tabs" aria-label="Manage tabs">
+      <option value="">&#9881; Manage</option>
+    </select>
+    <button id="btn-add-tab" type="button" title="Add a custom list tab">+</button>
+  </nav>
+
+  <section class="card" data-panel="wish">
+    <div class="section-head">
+      <h2>Wish List</h2>
+      <div class="inline">
+        <button id="btn-refresh-wish" class="ghost" type="button">Refresh</button>
+        <button id="btn-repair-wish" class="ghost" type="button">Repair Images</button>
+        <button id="btn-clear-wish" class="ghost" type="button">Clear</button>
+      </div>
+    </div>
+    <div class="row">
+      <input id="filter-wish" type="text" placeholder="Filter items..." aria-label="Filter wish list">
+    </div>
+    <div id="grid-wish" class="grid"></div>
+  </section>
+
+  <section class="card" data-panel="npc" hidden>
+    <div class="section-head">
+      <h2>NPC</h2>
+      <div class="inline">
+        <button id="btn-refresh-npc" class="ghost" type="button">Refresh</button>
+        <button id="btn-repair-npc" class="ghost" type="button">Repair Images</button>
+        <button id="btn-clear-npc" class="ghost" type="button">Clear</button>
+      </div>
+    </div>
+    <div class="row">
+      <input id="filter-npc" type="text" placeholder="Filter items..." aria-label="Filter npc list">
+    </div>
+      <!-- Export dropdown removed from NPC panel. Exporter only exists at top section. -->
+    <div id="grid-npc" class="grid"></div>
+  </section>
+
+  <section class="card" data-panel="sell" hidden>
+    <div class="section-head">
+      <h2>Sell</h2>
+      <div class="inline">
+        <button id="btn-refresh-sell" class="ghost" type="button">Refresh</button>
+        <button id="btn-repair-sell" class="ghost" type="button">Repair Images</button>
+        <button id="btn-clear-sell" class="ghost" type="button">Clear</button>
+      </div>
+    </div>
+    <div class="row">
+      <input id="filter-sell" type="text" placeholder="Filter items..." aria-label="Filter sell list">
+    </div>
+    <div id="grid-sell" class="grid"></div>
+  </section>
+
+  <section class="card" data-panel="hair" hidden>
+    <div class="section-head">
+      <h2>Hair</h2>
+      <div class="inline">
+        <button id="btn-refresh-hair" class="ghost" type="button">Refresh</button>
+        <button id="btn-repair-hair" class="ghost" type="button">Repair Images</button>
+        <button id="btn-clear-hair" class="ghost" type="button">Clear</button>
+      </div>
+    </div>
+    <div class="row">
+      <input id="filter-hair" type="text" placeholder="Filter hair..." aria-label="Filter hair list">
+    </div>
+    <div id="grid-hair" class="grid"></div>
+  </section>
+
+  <section class="card" data-panel="sellSets" hidden>
+    <div class="section-head">
+      <h2>Sets</h2>
+      <div class="inline">
+        <button id="btn-refresh-sellSets" class="ghost" type="button">Refresh</button>
+        <button id="btn-repair-sellSets" class="ghost" type="button">Repair Images</button>
+        <button id="btn-clear-sellSets" class="ghost" type="button">Clear</button>
+      </div>
+    </div>
+    <div class="row">
+      <input id="filter-sellSets" type="text" placeholder="Filter sets..." aria-label="Filter sets list">
+    </div>
+    <div id="grid-sellSets" class="grid"></div>
+  </section>
+
+  <section class="card" data-panel="pdeSlots" hidden>
+    <div class="section-head">
+      <h2>PDE/Slots</h2>
+      <div class="inline">
+        <button id="btn-refresh-pdeSlots" class="ghost" type="button">Refresh</button>
+        <button id="btn-repair-pdeSlots" class="ghost" type="button">Repair Images</button>
+        <button id="btn-clear-pdeSlots" class="ghost" type="button">Clear</button>
+      </div>
+    </div>
+    <div class="row">
+      <input id="filter-pdeSlots" type="text" placeholder="Filter PDE/Slots..." aria-label="Filter PDE/Slots list">
+    </div>
+    <div id="grid-pdeSlots" class="grid"></div>
+  </section>
+
+  <section class="card" data-panel="furns" hidden>
+    <div class="section-head">
+      <h2>Furns</h2>
+      <div class="inline">
+        <button id="btn-refresh-furns" class="ghost" type="button">Refresh</button>
+        <button id="btn-repair-furns" class="ghost" type="button">Repair Images</button>
+        <button id="btn-clear-furns" class="ghost" type="button">Clear</button>
+      </div>
+    </div>
+    <div class="row">
+      <input id="filter-furns" type="text" placeholder="Filter furniture..." aria-label="Filter furniture list">
+    </div>
+    <div id="grid-furns" class="grid"></div>
+  </section>
+
+  <section class="card" data-panel="buy" hidden>
+    <div class="section-head">
+      <h2>Buy</h2>
+      <div class="inline">
+        <button id="btn-refresh-buy" class="ghost" type="button">Refresh</button>
+        <button id="btn-repair-buy" class="ghost" type="button">Repair Images</button>
+        <button id="btn-clear-buy" class="ghost" type="button">Clear</button>
+      </div>
+    </div>
+    <div class="row">
+      <input id="filter-buy" type="text" placeholder="Filter buy list..." aria-label="Filter buy list">
+    </div>
+    <div id="grid-buy" class="grid"></div>
+  </section>
+
+  <section class="card" data-panel="pricecheck" hidden>
+    <h2>Price Check</h2>
+    <div class="row">
+      <label class="lbl" for="pc-query">Search (or paste item link/ID)</label>
+      <div class="inline">
+        <input id="pc-query" type="text" placeholder="e.g., 'Cupid Bow', 123456, or a YoWorld.info link">
+        <button id="pc-btn-search" type="button">Search</button>
+      </div>
+      <div class="hint">Uses api.yoworld.info. Pick an item and copy a “price check” message to ask other players.</div>
+    </div>
+    <div id="pc-results" class="results"></div>
+    <div id="pc-detail" class="card" style="border:1px solid var(--border); border-radius:12px; margin-top:10px;">
+      <div class="hint">Select an item to view details.</div>
+    </div>
+
+    <div class="section-head" style="margin-top:12px;">
+      <h2 style="margin:0; font-size:13px;">Saved Price Check List</h2>
+      <div class="inline">
+        <button id="btn-refresh-pricecheck" class="ghost" type="button">Refresh</button>
+        <button id="btn-repair-pricecheck" class="ghost" type="button">Repair Images</button>
+        <button id="btn-clear-pricecheck" class="ghost" type="button">Clear</button>
+      </div>
+    </div>
+    <div class="row">
+      <input id="filter-pricecheck" type="text" placeholder="Filter price check items..." aria-label="Filter price check list">
+    </div>
+    <div id="grid-pricecheck" class="grid"></div>
+  </section>
+
+  <section class="card" data-panel="fantasy" hidden>
+    <div class="section-head">
+      <h2>Fantasy</h2>
+      <div class="inline">
+        <button id="btn-refresh-fantasy" class="ghost" type="button">Refresh</button>
+        <button id="btn-repair-fantasy" class="ghost" type="button">Repair Images</button>
+        <button id="btn-clear-fantasy" class="ghost" type="button">Clear</button>
+      </div>
+    </div>
+    <div class="row">
+      <input id="filter-fantasy" type="text" placeholder="Filter fantasy items..." aria-label="Filter fantasy list">
+    </div>
+    <div id="grid-fantasy" class="grid"></div>
+  </section>
+
+  <canvas id="export-canvas" width="1" height="1" style="display:none"></canvas>
+  <script src="popup.js"></script>
+
+  </div>
+
+  <div id="suite-boardbuilder" hidden>
+    <header class="header">
+      <div>
+        <h1>Board Builder</h1>
+        <div class="sub">3×2 board • Pull from lists • Export PNG</div>
+      </div>
+      <div class="inline" style="flex-wrap:wrap; justify-content:flex-end;">
+        <button id="bb-btn-export" class="primary" type="button">Export PNG</button>
+        <button id="bb-btn-copy" class="ghost" type="button">Copy PNG</button>
+        <button id="bb-btn-clear" class="ghost" type="button">Clear</button>
+      </div>
+    </header>
+
+    <section class="card">
+      <h2>Quick Fill</h2>
+      <div class="row">
+        <label class="lbl">From list</label>
+        <div class="inline" style="flex-wrap:wrap;">
+          <select id="bb-fill-list" aria-label="List">
+            <option value="wish">Wish List</option>
+            <option value="npc">NPC</option>
+            <option value="sell">Sell</option>
+            <option value="hair">Hair</option>
+            <option value="sellSets">Sets</option>
+            <option value="buy">Buy</option>
+            <option value="pdeSlots">PDE/Slots</option>
+            <option value="furns">Furns</option>
+            <option value="pricecheck">Price Check</option>
+            <option value="fantasy">Fantasy</option>
+          </select>
+          <input id="bb-fill-start" type="number" min="1" step="1" value="1" style="width:120px" aria-label="Start index" />
+          <label class="inline" style="gap:6px;">
+            <input id="bb-fill-use-notes" type="checkbox" style="width:auto;" />
+            <span style="color:var(--muted); font-size:11px;">Use list notes as captions</span>
+          </label>
+          <button id="bb-btn-fill" type="button">Fill 6 Slots</button>
+          <button id="bb-btn-fill-next" type="button">Fill Next 6 Slots</button>
+        </div>
+        <div class="hint">Uses your saved Lists data. Start index is 1-based.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Slots</h2>
+      <div class="bb-slots" id="bb-slots"></div>
+      <div id="bb-status" class="hint" aria-live="polite"></div>
+    </section>
+
+    <section class="card">
+      <h2>Preview</h2>
+      <canvas id="bb-canvas" width="390" height="260" class="bb-canvas"></canvas>
+      <div class="hint">Actual size: 390×260 pixels (3×2 grid). Perfect for YoWorld paint boards.</div>
+    </section>
+  </div>
+
+  <div id="suite-settings" hidden>
+    <header class="header">
+      <div>
+        <h1>Settings</h1>
+        <div class="sub">YoBoards • Lists + Board Builder</div>
+      </div>
+    </header>
+
+    <section class="card">
+      <h2>Default Launch Surface</h2>
+      <div class="row">
+        <label class="lbl" for="suite-default-surface">Toolbar click opens</label>
+        <select id="suite-default-surface">
+          <option value="sidepanel">Side panel</option>
+          <option value="popup">Popup window</option>
+        </select>
+        <div class="hint">Choose what opens by default when you click the extension icon.</div>
+      </div>
+      <div class="row">
+        <div class="inline" style="gap:8px; flex-wrap:wrap;">
+          <button id="suite-btn-open-sidepanel" type="button">Open Side Panel Now</button>
+          <button id="suite-btn-open-popup" class="ghost" type="button">Open Popup Now</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Appearance</h2>
+      <div class="row">
+        <label class="lbl" for="suite-theme-select">Color theme</label>
+        <select id="suite-theme-select">
+          <option value="classic">Classic (Black & White)</option>
+          <option value="dark">Dark</option>
+          <option value="valentine">Valentine's Day</option>
+          <option value="ocean">Ocean</option>
+          <option value="forest">Forest</option>
+          <option value="sunset">Sunset</option>
+          <option value="arcane">Arcane (Fantasy)</option>
+          <option value="cyberpunk">Cyberpunk</option>
+          <option value="autumn">Autumn</option>
+          <option value="midnight">Midnight</option>
+          <option value="cherryblossom">Cherry Blossom</option>
+          <option value="emerald">Emerald</option>
+        </select>
+        <div class="hint">Theme applies to all modules and syncs across devices.</div>
+      </div>
+
+      <div class="row">
+        <label class="lbl" for="suite-image-source-select">Item image source</label>
+        <select id="suite-image-source-select">
+          <option value="cdn">YoWorld CDN (fast, sometimes missing)</option>
+          <option value="info">YoWorld.info image link (more reliable)</option>
+          <option value="auto">Auto (CDN, fallback to YoWorld.info)</option>
+        </select>
+        <div class="hint">If you see broken images in Lists, switch to YoWorld.info or Auto.</div>
+      </div>
+
+      <div class="row">
+        <label class="lbl" for="list-density">Lists card density</label>
+        <select id="list-density" aria-label="List card density">
+          <option value="comfortable" selected>Comfortable</option>
+          <option value="compact">Compact</option>
+        </select>
+        <div class="hint">Controls visual spacing in Lists cards only.</div>
+      </div>
+
+      <div class="row">
+        <label class="lbl">
+          <input type="checkbox" id="suite-allow-copy-text" style="width:auto; margin-right:6px;" />
+          Allow copying text from item cards
+        </label>
+        <div class="hint">Enable text selection on item cards. When disabled, cards are easier to drag and reorder.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>About</h2>
+      <p style="margin:0; color:var(--muted); font-size:12px;">YoBoards is a focused extension for YoWorld players with Lists, Board Builder, and synced settings.</p>
+    </section>
+  </div>
+
+  <script src="boardbuilder.js"></script>
+  <script src="suite-lite.js"></script>
+</body>
+</html>
