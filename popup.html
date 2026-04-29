@@ -26,16 +26,6 @@
         <select id="export-scope" aria-label="Export scope">
           <option value="active">Current tab</option>
           <option value="all">All lists</option>
-          <option value="wish">Wish List</option>
-          <option value="npc">NPC</option>
-          <option value="sell">Sell</option>
-          <option value="hair">Hair</option>
-          <option value="sellSets">Sets</option>
-          <option value="buy">Buy</option>
-          <option value="pdeSlots">PDE/Slots</option>
-          <option value="furns">Furns</option>
-          <option value="pricecheck">Price Check</option>
-          <option value="fantasy">Fantasy</option>
         </select>
         <select id="export-preset" aria-label="Export preset">
           <option value="forum-wishlist">Preset: Forums Wishlist</option>
@@ -69,18 +59,7 @@
     <h2>Add item</h2>
     <div class="row">
       <label class="lbl">Section</label>
-      <select id="in-section">
-        <option value="wish">Wish List</option>
-        <option value="npc">NPC</option>
-        <option value="sell">Sell</option>
-        <option value="hair">Hair</option>
-        <option value="sellSets">Sets</option>
-        <option value="buy">Buy</option>
-        <option value="pdeSlots">PDE/Slots</option>
-        <option value="furns">Furns</option>
-        <option value="pricecheck">Price Check</option>
-        <option value="fantasy">Fantasy</option>
-      </select>
+      <select id="in-section"></select>
     </div>
 
     <div class="row">
@@ -119,129 +98,10 @@
     <button id="btn-add-tab" type="button" title="Add a custom list tab">+</button>
   </nav>
 
-  <section class="card" data-panel="wish">
-    <div class="section-head">
-      <h2>Wish List</h2>
-      <div class="inline">
-        <button id="btn-refresh-wish" class="ghost" type="button">Refresh</button>
-        <button id="btn-repair-wish" class="ghost" type="button">Repair Images</button>
-        <button id="btn-clear-wish" class="ghost" type="button">Clear</button>
-      </div>
-    </div>
-    <div class="row">
-      <input id="filter-wish" type="text" placeholder="Filter items..." aria-label="Filter wish list">
-    </div>
-    <div id="grid-wish" class="grid"></div>
-  </section>
+  <div id="list-panels-root"></div>
 
-  <section class="card" data-panel="npc" hidden>
-    <div class="section-head">
-      <h2>NPC</h2>
-      <div class="inline">
-        <button id="btn-refresh-npc" class="ghost" type="button">Refresh</button>
-        <button id="btn-repair-npc" class="ghost" type="button">Repair Images</button>
-        <button id="btn-clear-npc" class="ghost" type="button">Clear</button>
-      </div>
-    </div>
-    <div class="row">
-      <input id="filter-npc" type="text" placeholder="Filter items..." aria-label="Filter npc list">
-    </div>
-      <!-- Export dropdown removed from NPC panel. Exporter only exists at top section. -->
-    <div id="grid-npc" class="grid"></div>
-  </section>
-
-  <section class="card" data-panel="sell" hidden>
-    <div class="section-head">
-      <h2>Sell</h2>
-      <div class="inline">
-        <button id="btn-refresh-sell" class="ghost" type="button">Refresh</button>
-        <button id="btn-repair-sell" class="ghost" type="button">Repair Images</button>
-        <button id="btn-clear-sell" class="ghost" type="button">Clear</button>
-      </div>
-    </div>
-    <div class="row">
-      <input id="filter-sell" type="text" placeholder="Filter items..." aria-label="Filter sell list">
-    </div>
-    <div id="grid-sell" class="grid"></div>
-  </section>
-
-  <section class="card" data-panel="hair" hidden>
-    <div class="section-head">
-      <h2>Hair</h2>
-      <div class="inline">
-        <button id="btn-refresh-hair" class="ghost" type="button">Refresh</button>
-        <button id="btn-repair-hair" class="ghost" type="button">Repair Images</button>
-        <button id="btn-clear-hair" class="ghost" type="button">Clear</button>
-      </div>
-    </div>
-    <div class="row">
-      <input id="filter-hair" type="text" placeholder="Filter hair..." aria-label="Filter hair list">
-    </div>
-    <div id="grid-hair" class="grid"></div>
-  </section>
-
-  <section class="card" data-panel="sellSets" hidden>
-    <div class="section-head">
-      <h2>Sets</h2>
-      <div class="inline">
-        <button id="btn-refresh-sellSets" class="ghost" type="button">Refresh</button>
-        <button id="btn-repair-sellSets" class="ghost" type="button">Repair Images</button>
-        <button id="btn-clear-sellSets" class="ghost" type="button">Clear</button>
-      </div>
-    </div>
-    <div class="row">
-      <input id="filter-sellSets" type="text" placeholder="Filter sets..." aria-label="Filter sets list">
-    </div>
-    <div id="grid-sellSets" class="grid"></div>
-  </section>
-
-  <section class="card" data-panel="pdeSlots" hidden>
-    <div class="section-head">
-      <h2>PDE/Slots</h2>
-      <div class="inline">
-        <button id="btn-refresh-pdeSlots" class="ghost" type="button">Refresh</button>
-        <button id="btn-repair-pdeSlots" class="ghost" type="button">Repair Images</button>
-        <button id="btn-clear-pdeSlots" class="ghost" type="button">Clear</button>
-      </div>
-    </div>
-    <div class="row">
-      <input id="filter-pdeSlots" type="text" placeholder="Filter PDE/Slots..." aria-label="Filter PDE/Slots list">
-    </div>
-    <div id="grid-pdeSlots" class="grid"></div>
-  </section>
-
-  <section class="card" data-panel="furns" hidden>
-    <div class="section-head">
-      <h2>Furns</h2>
-      <div class="inline">
-        <button id="btn-refresh-furns" class="ghost" type="button">Refresh</button>
-        <button id="btn-repair-furns" class="ghost" type="button">Repair Images</button>
-        <button id="btn-clear-furns" class="ghost" type="button">Clear</button>
-      </div>
-    </div>
-    <div class="row">
-      <input id="filter-furns" type="text" placeholder="Filter furniture..." aria-label="Filter furniture list">
-    </div>
-    <div id="grid-furns" class="grid"></div>
-  </section>
-
-  <section class="card" data-panel="buy" hidden>
-    <div class="section-head">
-      <h2>Buy</h2>
-      <div class="inline">
-        <button id="btn-refresh-buy" class="ghost" type="button">Refresh</button>
-        <button id="btn-repair-buy" class="ghost" type="button">Repair Images</button>
-        <button id="btn-clear-buy" class="ghost" type="button">Clear</button>
-      </div>
-    </div>
-    <div class="row">
-      <input id="filter-buy" type="text" placeholder="Filter buy list..." aria-label="Filter buy list">
-    </div>
-    <div id="grid-buy" class="grid"></div>
-  </section>
-
-  <section class="card" data-panel="pricecheck" hidden>
-    <h2>Price Check</h2>
+  <section class="card" data-panel="pc" hidden>
+    <h2>PC</h2>
     <div class="row">
       <label class="lbl" for="pc-query">Search (or paste item link/ID)</label>
       <div class="inline">
@@ -256,35 +116,21 @@
     </div>
 
     <div class="section-head" style="margin-top:12px;">
-      <h2 style="margin:0; font-size:13px;">Saved Price Check List</h2>
+      <h2 style="margin:0; font-size:13px;">Saved PC List</h2>
       <div class="inline">
-        <button id="btn-refresh-pricecheck" class="ghost" type="button">Refresh</button>
-        <button id="btn-repair-pricecheck" class="ghost" type="button">Repair Images</button>
-        <button id="btn-clear-pricecheck" class="ghost" type="button">Clear</button>
+        <button id="btn-refresh-pc" class="ghost" type="button">Refresh</button>
+        <button id="btn-repair-pc" class="ghost" type="button">Repair Images</button>
+        <button id="btn-clear-pc" class="ghost" type="button">Clear</button>
       </div>
     </div>
     <div class="row">
-      <input id="filter-pricecheck" type="text" placeholder="Filter price check items..." aria-label="Filter price check list">
+      <input id="filter-pc" type="text" placeholder="Filter PC items..." aria-label="Filter PC list">
     </div>
-    <div id="grid-pricecheck" class="grid"></div>
-  </section>
-
-  <section class="card" data-panel="fantasy" hidden>
-    <div class="section-head">
-      <h2>Fantasy</h2>
-      <div class="inline">
-        <button id="btn-refresh-fantasy" class="ghost" type="button">Refresh</button>
-        <button id="btn-repair-fantasy" class="ghost" type="button">Repair Images</button>
-        <button id="btn-clear-fantasy" class="ghost" type="button">Clear</button>
-      </div>
-    </div>
-    <div class="row">
-      <input id="filter-fantasy" type="text" placeholder="Filter fantasy items..." aria-label="Filter fantasy list">
-    </div>
-    <div id="grid-fantasy" class="grid"></div>
+    <div id="grid-pc" class="grid"></div>
   </section>
 
   <canvas id="export-canvas" width="1" height="1" style="display:none"></canvas>
+  <script src="list-config.js"></script>
   <script src="popup.js"></script>
 
   </div>
@@ -308,16 +154,6 @@
         <label class="lbl">From list</label>
         <div class="inline" style="flex-wrap:wrap;">
           <select id="bb-fill-list" aria-label="List">
-            <option value="wish">Wish List</option>
-            <option value="npc">NPC</option>
-            <option value="sell">Sell</option>
-            <option value="hair">Hair</option>
-            <option value="sellSets">Sets</option>
-            <option value="buy">Buy</option>
-            <option value="pdeSlots">PDE/Slots</option>
-            <option value="furns">Furns</option>
-            <option value="pricecheck">Price Check</option>
-            <option value="fantasy">Fantasy</option>
           </select>
           <input id="bb-fill-start" type="number" min="1" step="1" value="1" style="width:120px" aria-label="Start index" />
           <label class="inline" style="gap:6px;">

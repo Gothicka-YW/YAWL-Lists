@@ -3,8 +3,77 @@ const LOCAL_KEY = 'yo_boards_local_v1';
 const SYNC_SETTINGS_KEY = 'yo_boards_sync_settings_v1';
 const LIST_DENSITY_SESSION_KEY = 'yo_boards_list_density_v1';
 
+const listConfigApi = globalThis.YoBoardsListConfig;
+if(!listConfigApi) throw new Error('YoBoardsListConfig is not loaded.');
+
+const {
+  BUILTIN_TABS,
+  DEFAULT_TAB_KEY,
+  SPECIAL_PC_TAB_KEY,
+  createBuiltinListState,
+  createSectionFilterState,
+  getBuiltinTabDef,
+  getBuiltinTabKeys,
+  normalizeBuiltinKeyList,
+  sourceHasLegacyBuiltinKeys,
+  migrateBuiltinListsFromSource
+} = listConfigApi;
+
 function $(s){return document.querySelector(s);}
 function el(t,c){const e=document.createElement(t); if(c) e.className=c; return e;}
+
+function safeNow(){
+  try{ return Date.now(); }catch{ return 0; }
+}
+
+function getAllListTabDefs(){
+  return [
+    ...BUILTIN_TABS.map((tab)=> ({ key: tab.key, label: tab.label, exportTitle: tab.exportTitle || tab.label, panelType: tab.panelType || 'generic', isCustom: false })),
+    ...getCustomTabs().map((tab)=> ({ key: tab.key, label: tab.label, exportTitle: tab.label, panelType: 'generic', isCustom: true }))
+  ];
+}
+
+function getListTabLabel(tabKey){
+  const builtin = getBuiltinTabDef(tabKey);
+  if(builtin?.label) return builtin.label;
+  const custom = getCustomTabs().find((tab)=> tab.key === tabKey);
+  return custom?.label || String(tabKey || 'list');
+}
+
+function replaceSelectOptions(selectEl, options, preferredValue){
+  if(!selectEl) return;
+  const fallbackValue = options[0]?.value || '';
+  const currentValue = typeof preferredValue === 'string' ? preferredValue : String(selectEl.value || '');
+  selectEl.innerHTML = '';
+  for(const optionDef of options){
+    const optionEl = document.createElement('option');
+    optionEl.value = optionDef.value;
+    optionEl.textContent = optionDef.label;
+    selectEl.appendChild(optionEl);
+  }
+  const nextValue = options.some((optionDef)=> optionDef.value === currentValue) ? currentValue : fallbackValue;
+  if(nextValue) selectEl.value = nextValue;
+}
+
+function syncBuiltinPanelsFromConfig(){
+  for(const tab of BUILTIN_TABS){
+    const panel = document.querySelector(`[data-panel="${tab.key}"]`);
+    if(!panel) continue;
+
+    if(tab.panelType === 'pricecheck'){
+      const panelTitle = panel.querySelector(':scope > h2');
+      if(panelTitle) panelTitle.textContent = tab.label;
+      const savedListTitle = panel.querySelector('.section-head h2');
+      if(savedListTitle) savedListTitle.textContent = `Saved ${tab.label} List`;
+    }
+
+    const filterInput = panel.querySelector(`#filter-${CSS.escape(tab.key)}`);
+    if(filterInput){
+      filterInput.placeholder = tab.filterPlaceholder || `Filter ${tab.label.toLowerCase()} items...`;
+      filterInput.setAttribute('aria-label', tab.filterAriaLabel || `Filter ${tab.label} list`);
+    }
+  }
+}
 
 function getListDensity(){
   try{
@@ -26,23 +95,15 @@ function setListDensity(v){
 
 function defaultState(){
   return {
-    wish: [],
-    npc: [],
-    sell: [],
-    hair: [],
-    sellSets: [],
-    buy: [],
-    pdeSlots: [],
-    furns: [],
-    pricecheck: [],
-    fantasy: [],
+    ...createBuiltinListState(),
     settings: {
       theme: 'classic',
       imageSource: 'cdn', // 'cdn' | 'info' | 'auto'
       allowCopyText: false,  // allow text selection on item cards
       customTabs: [],         // user-created custom list tabs
       tabOrder: [],           // saved order of all tabs (builtin + custom)
-      hiddenTabs: []          // builtin tab keys hidden by the user
+      hiddenTabs: [],         // builtin tab keys hidden by the user
+      lastSavedAt: 0          // used to prefer the freshest known settings state
     }
   };
 }
@@ -52,18 +113,7 @@ let state = defaultState();
 let lastPriceCheckItem = null;
 
 // Section filter state (search/filter within each list)
-let sectionFilters = {
-  wish: '',
-  npc: '',
-  sell: '',
-  hair: '',
-  sellSets: '',
-  buy: '',
-  pdeSlots: '',
-  furns: '',
-  pricecheck: '',
-  fantasy: ''
-};
+let sectionFilters = createSectionFilterState();
 
 const ACTIVE_TAB_KEY = 'yo_boards_active_tab_v1';
 const TAB_DRAFTS_KEY = 'yo_boards_tab_drafts_v1';
@@ -142,7 +192,7 @@ function applyDraftForTab(tabName){
   if(n) n.value = typeof d.note === 'string' ? d.note : '';
 }
 
-let currentTab = 'wish';
+let currentTab = DEFAULT_TAB_KEY;
 
 function setActiveTab(tabName){
   // Save whatever was being typed for the previous tab.
@@ -166,11 +216,48 @@ function setActiveTab(tabName){
   updateExportPreviewSummary();
 }
 
+function flashDropZoneMessage(message, kind){
+  const zone = $('#drop-zone');
+  if(!zone) return;
+
+  const baseMessage = zone.dataset.baseMessage || zone.textContent.trim() || 'Drop a YoWorld.info item link here to add it';
+  zone.dataset.baseMessage = baseMessage;
+  zone.textContent = String(message || baseMessage);
+  zone.classList.toggle('is-success', kind === 'success');
+  zone.classList.toggle('is-error', kind === 'error');
+
+  clearTimeout(flashDropZoneMessage._timer);
+  flashDropZoneMessage._timer = setTimeout(()=>{
+    zone.textContent = baseMessage;
+    zone.classList.remove('is-success', 'is-error');
+  }, 2200);
+}
+flashDropZoneMessage._timer = 0;
+
+function revealSectionItem(section, itemKey){
+  if(!section || !itemKey) return;
+  setActiveTab(section);
+
+  requestAnimationFrame(()=>{
+    const tile = document.querySelector(`.tile[data-section="${CSS.escape(section)}"][data-key="${CSS.escape(itemKey)}"]`);
+    if(!tile) return;
+    tile.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    tile.classList.add('is-added-highlight');
+    clearTimeout(revealSectionItem._timers.get(tile));
+    const timer = setTimeout(()=>{
+      tile.classList.remove('is-added-highlight');
+      revealSectionItem._timers.delete(tile);
+    }, 1800);
+    revealSectionItem._timers.set(tile, timer);
+  });
+}
+revealSectionItem._timers = new WeakMap();
+
 function getActiveTab(){
   const active = document.querySelector('.tab.is-active[data-tab]');
   if(active?.dataset?.tab) return active.dataset.tab;
-  try{ return localStorage.getItem(ACTIVE_TAB_KEY) || 'wish'; }catch{}
-  return 'wish';
+  try{ return localStorage.getItem(ACTIVE_TAB_KEY) || DEFAULT_TAB_KEY; }catch{}
+  return DEFAULT_TAB_KEY;
 }
 
 async function openSidePanel(){
@@ -278,9 +365,9 @@ function wireTabs(){
 
     wireTabs._delegatedDnD = true;
   }
-  let initial = 'wish';
-  try{ initial = localStorage.getItem(ACTIVE_TAB_KEY) || 'wish'; }catch{}
-  if(!isKnownTab(initial)) initial = 'wish';
+  let initial = DEFAULT_TAB_KEY;
+  try{ initial = localStorage.getItem(ACTIVE_TAB_KEY) || DEFAULT_TAB_KEY; }catch{}
+  if(!isKnownTab(initial)) initial = DEFAULT_TAB_KEY;
   currentTab = initial;
   setActiveTab(initial);
 }
@@ -529,36 +616,112 @@ function exportPalette(theme){
 
 function normalizeStateFromStorage(maybe){
   const s = (maybe && typeof maybe === 'object') ? maybe : {};
-  const customTabs = (Array.isArray(s?.settings?.customTabs) ? s.settings.customTabs : []).filter(t => t && typeof t.key === 'string' && t.key.startsWith('custom_') && typeof t.label === 'string');
   const result = {
-    wish: Array.isArray(s.wish) ? s.wish : [],
-    npc: Array.isArray(s.npc) ? s.npc : [],
-    sell: Array.isArray(s.sell) ? s.sell : [],
-    hair: Array.isArray(s.hair) ? s.hair : [],
-    sellSets: Array.isArray(s.sellSets) ? s.sellSets : [],
-    buy: Array.isArray(s.buy) ? s.buy : [],
-    pdeSlots: Array.isArray(s.pdeSlots) ? s.pdeSlots : [],
-    furns: Array.isArray(s.furns) ? s.furns : [],
-    pricecheck: Array.isArray(s.pricecheck) ? s.pricecheck : [],
-    fantasy: Array.isArray(s.fantasy) ? s.fantasy : [],
-    settings: {
-      theme: isKnownThemeValue(s?.settings?.theme) ? s.settings.theme : 'classic',
-      imageSource: (s?.settings?.imageSource === 'cdn' || s?.settings?.imageSource === 'info' || s?.settings?.imageSource === 'auto')
-        ? s.settings.imageSource
-        : 'cdn',
-      allowCopyText: !!s?.settings?.allowCopyText,
-      customTabs,
-      tabOrder: Array.isArray(s?.settings?.tabOrder) ? s.settings.tabOrder : [],
-      hiddenTabs: Array.isArray(s?.settings?.hiddenTabs) ? s.settings.hiddenTabs : []
-    }
+    ...migrateBuiltinListsFromSource(s),
+    settings: normalizeSettingsFromStorage(s?.settings)
   };
-  for(const t of customTabs) result[t.key] = Array.isArray(s[t.key]) ? s[t.key] : [];
+  for(const t of result.settings.customTabs) result[t.key] = Array.isArray(s[t.key]) ? s[t.key] : [];
   return result;
+}
+
+function normalizeSettingsFromStorage(maybeSettings){
+  const s = (maybeSettings && typeof maybeSettings === 'object') ? maybeSettings : {};
+  const customTabs = (Array.isArray(s.customTabs) ? s.customTabs : [])
+    .filter(t => t && typeof t.key === 'string' && t.key.startsWith('custom_') && typeof t.label === 'string')
+    .map(t => ({ key: t.key, label: String(t.label).trim().slice(0, 30) || 'Custom' }));
+  const lastSavedAt = Number(s.lastSavedAt);
+  return {
+    theme: isKnownThemeValue(s.theme) ? s.theme : 'classic',
+    imageSource: (s.imageSource === 'cdn' || s.imageSource === 'info' || s.imageSource === 'auto')
+      ? s.imageSource
+      : 'cdn',
+    allowCopyText: !!s.allowCopyText,
+    customTabs,
+    tabOrder: normalizeBuiltinKeyList(s.tabOrder),
+    hiddenTabs: normalizeBuiltinKeyList(s.hiddenTabs),
+    lastSavedAt: Number.isFinite(lastSavedAt) && lastSavedAt > 0 ? lastSavedAt : 0
+  };
+}
+
+function mergeCustomTabDefs(...customTabLists){
+  const merged = [];
+  const seen = new Set();
+  for(const list of customTabLists){
+    const normalized = normalizeSettingsFromStorage({ customTabs: list }).customTabs;
+    for(const tab of normalized){
+      if(!tab?.key || seen.has(tab.key)) continue;
+      seen.add(tab.key);
+      merged.push(tab);
+    }
+  }
+  return merged;
+}
+
+function pickPreferredSectionItems(primaryState, secondaryState, sectionKey){
+  const first = Array.isArray(primaryState?.[sectionKey]) ? primaryState[sectionKey] : [];
+  const second = Array.isArray(secondaryState?.[sectionKey]) ? secondaryState[sectionKey] : [];
+  return first.length >= second.length ? first : second;
+}
+
+function mergePersistedListState(localState, legacySyncState, preferredSettings, fallbackSettings){
+  const mergedSettings = normalizeSettingsFromStorage({
+    ...preferredSettings,
+    customTabs: mergeCustomTabDefs(
+      preferredSettings?.customTabs,
+      localState?.settings?.customTabs,
+      legacySyncState?.settings?.customTabs,
+      fallbackSettings?.customTabs
+    )
+  });
+
+  const mergedState = {
+    ...createBuiltinListState(),
+    settings: mergedSettings
+  };
+
+  for(const tab of BUILTIN_TABS){
+    mergedState[tab.key] = pickPreferredSectionItems(localState, legacySyncState, tab.key);
+  }
+
+  for(const tab of mergedSettings.customTabs){
+    if(!tab?.key) continue;
+    mergedState[tab.key] = pickPreferredSectionItems(localState, legacySyncState, tab.key);
+  }
+
+  return mergedState;
+}
+
+function settingsStateScore(maybeSettings){
+  const s = normalizeSettingsFromStorage(maybeSettings);
+  return (s.customTabs.length * 1000)
+    + (s.tabOrder.length * 100)
+    + (s.hiddenTabs.length * 10)
+    + (s.allowCopyText ? 1 : 0)
+    + (s.theme !== 'classic' ? 1 : 0)
+    + (s.imageSource !== 'cdn' ? 1 : 0);
+}
+
+function areSettingsEqual(a, b){
+  return JSON.stringify(normalizeSettingsFromStorage(a)) === JSON.stringify(normalizeSettingsFromStorage(b));
+}
+
+function pickPreferredSettings(primary, secondary){
+  const first = normalizeSettingsFromStorage(primary);
+  const second = normalizeSettingsFromStorage(secondary);
+  if(first.lastSavedAt !== second.lastSavedAt){
+    return first.lastSavedAt > second.lastSavedAt ? first : second;
+  }
+  const firstScore = settingsStateScore(first);
+  const secondScore = settingsStateScore(second);
+  if(firstScore !== secondScore){
+    return firstScore > secondScore ? first : second;
+  }
+  return first;
 }
 
 function countItemsInState(s){
   if(!s) return 0;
-  let count = (Number(s?.wish?.length) || 0) + (Number(s?.npc?.length) || 0) + (Number(s?.sell?.length) || 0) + (Number(s?.hair?.length) || 0) + (Number(s?.sellSets?.length) || 0) + (Number(s?.buy?.length) || 0) + (Number(s?.pdeSlots?.length) || 0) + (Number(s?.furns?.length) || 0) + (Number(s?.pricecheck?.length) || 0) + (Number(s?.fantasy?.length) || 0);
+  let count = BUILTIN_TABS.reduce((sum, tab)=> sum + (Number(s?.[tab.key]?.length) || 0), 0);
   const customTabs = Array.isArray(s?.settings?.customTabs) ? s.settings.customTabs : [];
   for(const t of customTabs) count += (Number(s?.[t.key]?.length) || 0);
   return count;
@@ -605,35 +768,33 @@ async function loadState(){
   const legacySyncState = normalizeStateFromStorage(legacySyncRes.value);
   const localState = normalizeStateFromStorage(localRes.value);
 
-  const legacyCount = countItemsInState(legacySyncState);
-  const localCount = countItemsInState(localState);
-  const listState = (localCount >= legacyCount) ? localState : legacySyncState;
-
   // Settings are small enough to sync reliably.
-  const syncedSettingsOnly = normalizeStateFromStorage({ settings: syncSettingsRes.value }).settings;
+  const syncedSettingsOnly = normalizeSettingsFromStorage(syncSettingsRes.value);
   const haveSyncedSettings = !!(syncSettingsRes.value && typeof syncSettingsRes.value === 'object');
+  const mergedSettingsBase = haveSyncedSettings
+    ? pickPreferredSettings(pickPreferredSettings(localState.settings, legacySyncState.settings), syncedSettingsOnly)
+    : pickPreferredSettings(localState.settings, legacySyncState.settings);
 
-  state = {
-    wish: listState.wish,
-    npc: listState.npc,
-    sell: listState.sell,
-    hair: listState.hair,
-    sellSets: listState.sellSets,
-    buy: listState.buy,
-    pdeSlots: listState.pdeSlots,
-    furns: listState.furns,
-    pricecheck: listState.pricecheck,
-    fantasy: listState.fantasy,
-    settings: haveSyncedSettings ? syncedSettingsOnly : listState.settings
-  };
-  // Populate list data for any custom tabs from local storage
-  const customTabDefs = state.settings?.customTabs || [];
-  for(const tab of customTabDefs){
-    if(tab?.key) state[tab.key] = Array.isArray(listState[tab.key]) ? listState[tab.key] : [];
+  state = mergePersistedListState(localState, legacySyncState, mergedSettingsBase, syncedSettingsOnly);
+  const mergedSettings = state.settings;
+
+  if(haveSyncedSettings && !areSettingsEqual(mergedSettings, syncedSettingsOnly)){
+    const repairedSync = await storageSet('sync', SYNC_SETTINGS_KEY, mergedSettings);
+    if(!repairedSync.ok) console.warn('sync settings repair failed:', repairedSync.error);
+  }
+  const normalizedLocalState = normalizeStateFromStorage(localRes.value);
+  if(JSON.stringify(state) !== JSON.stringify(normalizedLocalState)){
+    const repairedLocal = await storageSet('local', LOCAL_KEY, state);
+    if(!repairedLocal.ok) console.warn('local settings repair failed:', repairedLocal.error);
+  }else if(sourceHasLegacyBuiltinKeys(localRes.value) || sourceHasLegacyBuiltinKeys(legacySyncRes.value)){
+    const repairedLocal = await storageSet('local', LOCAL_KEY, state);
+    if(!repairedLocal.ok) console.warn('local legacy key repair failed:', repairedLocal.error);
   }
 }
 
 async function saveState(){
+  state.settings = normalizeSettingsFromStorage({ ...(state.settings || {}), lastSavedAt: safeNow() });
+
   // Always persist locally (higher quotas; reliable across extension reload).
   const local = await storageSet('local', LOCAL_KEY, state);
   if(!local.ok) console.warn('local set failed:', local.error);
@@ -641,6 +802,11 @@ async function saveState(){
   // Sync only lightweight settings (theme/image source). Lists stay local to avoid sync quota errors.
   const syncSettings = await storageSet('sync', SYNC_SETTINGS_KEY, state.settings || {});
   if(!syncSettings.ok) console.warn('sync settings set failed:', syncSettings.error);
+}
+
+async function saveLocalStateSnapshot(){
+  const local = await storageSet('local', LOCAL_KEY, state);
+  if(!local.ok) console.warn('local snapshot failed:', local.error);
 }
 
 function buildYwCdnImageUrlFromId(itemId){
@@ -985,7 +1151,8 @@ async function addItemFromSearchResult(section, it, note, opts){
         existing.note = trimmedNote;
         await saveState();
         render();
-        return { status: 'updated', id };
+        revealSectionItem(section, existing.key);
+        return { status: 'updated', id, key: existing.key, section };
       }
       if(options.allowPromptDup !== false){
         const ok = confirm('This item is already in this section. Update its note instead?');
@@ -993,13 +1160,15 @@ async function addItemFromSearchResult(section, it, note, opts){
           existing.note = trimmedNote;
           await saveState();
           render();
-          return { status: 'updated', id };
+          revealSectionItem(section, existing.key);
+          return { status: 'updated', id, key: existing.key, section };
         }
       }
     }else if(options.allowPromptDup !== false){
       alert('Duplicate detected: this item is already in this section.');
     }
-    return { status: 'duplicate', id };
+    revealSectionItem(section, existing.key);
+    return { status: 'duplicate', id, key: existing.key, section };
   }
 
   let activeInStore = false;
@@ -1038,7 +1207,8 @@ async function addItemFromSearchResult(section, it, note, opts){
   state[section].push(entry);
   await saveState();
   render();
-  return { status: 'added', id };
+  revealSectionItem(section, entry.key);
+  return { status: 'added', id, key: entry.key, section };
 }
 
 async function bulkAddSelectedSearchResults(){
@@ -1048,7 +1218,7 @@ async function bulkAddSelectedSearchResults(){
   const ids = Array.from(listSearchSelection);
   if(!ids.length) return;
 
-  const section = $('#in-section')?.value || 'wish';
+  const section = $('#in-section')?.value || DEFAULT_TAB_KEY;
   const note = ($('#in-note')?.value || '').trim();
 
   if(ids.length >= 25){
@@ -1193,7 +1363,7 @@ function renderSearchResultRow(it, resultsRoot){
   add.type = 'button';
   add.textContent = 'Add';
   add.addEventListener('click', async()=>{
-    const section = $('#in-section')?.value || 'wish';
+    const section = $('#in-section')?.value || DEFAULT_TAB_KEY;
     const note = ($('#in-note')?.value || '').trim();
     await addItemFromSearchResult(section, it, note, { allowPromptDup: true, updateNoteOnDup: false });
   });
@@ -1357,7 +1527,7 @@ async function addItemById(section, itemId, note){
   const id = Number(itemId);
   if(!Number.isFinite(id) || id <= 0){
     alert('Could not detect an item ID from the dropped content.');
-    return;
+    return { status: 'error', id: 0, section, key: '' };
   }
 
   state[section] = state[section] || [];
@@ -1372,11 +1542,14 @@ async function addItemById(section, itemId, note){
         existing.note = n;
         await saveState();
         render();
+        revealSectionItem(section, existing.key);
+        return { status: 'updated', id, key: existing.key, section };
       }
     }else{
       alert('Duplicate detected: this item is already in this section.');
     }
-    return;
+    revealSectionItem(section, existing.key);
+    return { status: 'duplicate', id, key: existing.key, section };
   }
 
   let activeInStore = false;
@@ -1413,6 +1586,8 @@ async function addItemById(section, itemId, note){
   state[section].push(entry);
   await saveState();
   render();
+  revealSectionItem(section, entry.key);
+  return { status: 'added', id, key: entry.key, section };
 }
 
 function wireSidePanelDrop(){
@@ -1439,13 +1614,18 @@ function wireSidePanelDrop(){
 
     if(!url){
       alert('Drop a YoWorld.info item link (URL).');
+      flashDropZoneMessage('Drop a YoWorld.info item link (URL).', 'error');
       return;
     }
 
     const id = extractItemIdFromUrl(url);
-    const section = $('#in-section')?.value || getActiveTab() || 'wish';
+    const section = $('#in-section')?.value || getActiveTab() || DEFAULT_TAB_KEY;
     const note = ($('#in-note')?.value || '').trim();
-    await addItemById(section, id, note);
+    const result = await addItemById(section, id, note);
+    const sectionLabel = getListTabLabel(section);
+    if(result?.status === 'added') flashDropZoneMessage(`Added item ${result.id} to ${sectionLabel}.`, 'success');
+    else if(result?.status === 'updated') flashDropZoneMessage(`Updated existing item ${result.id} in ${sectionLabel}.`, 'success');
+    else if(result?.status === 'duplicate') flashDropZoneMessage(`Item ${result.id} is already in ${sectionLabel}.`, 'error');
   });
 }
 wireSidePanelDrop._wired = false;
@@ -1457,16 +1637,7 @@ function storeBadge(active){
 }
 
 function render(){
-  renderGrid('wish', $('#grid-wish'));
-  renderGrid('npc', $('#grid-npc'));
-  renderGrid('sell', $('#grid-sell'));
-  renderGrid('hair', $('#grid-hair'));
-  renderGrid('sellSets', $('#grid-sellSets'));
-  renderGrid('buy', $('#grid-buy'));
-  renderGrid('pdeSlots', $('#grid-pdeSlots'));
-  renderGrid('furns', $('#grid-furns'));
-  renderGrid('pricecheck', $('#grid-pricecheck'));
-  renderGrid('fantasy', $('#grid-fantasy'));
+  BUILTIN_TABS.forEach((tab)=> renderGrid(tab.key, $('#grid-' + tab.key)));
   getCustomTabs().forEach(t => renderGrid(t.key, $('#grid-' + t.key)));
   updateExportPreviewSummary();
 }
@@ -1850,7 +2021,7 @@ async function tryQuickAddFromAddItemInputs(){
   const id = (idFromUrl > 0) ? idFromUrl : (Number.isFinite(fromNum) ? fromNum : 0);
   if(!(id > 0)) return false;
 
-  const section = $('#in-section')?.value || getActiveTab() || 'wish';
+  const section = $('#in-section')?.value || getActiveTab() || DEFAULT_TAB_KEY;
   const note = ($('#in-note')?.value || '').trim();
   await addItemById(section, id, note);
   clearAddItemFields();
@@ -1865,7 +2036,7 @@ async function tryQuickAddFromPriceCheckInputs(){
   const id = (fromUrl > 0) ? fromUrl : (Number.isFinite(fromNum) ? fromNum : 0);
   if(!(id > 0)) return false;
 
-  await addItemById('pricecheck', id, '');
+  await addItemById(SPECIAL_PC_TAB_KEY, id, '');
   clearPriceCheckFields();
   return true;
 }
@@ -1950,7 +2121,7 @@ async function doSearch(){
       add.type = 'button';
       add.textContent = 'Add';
       add.addEventListener('click', async()=>{
-        const section = $('#in-section')?.value || 'wish';
+        const section = $('#in-section')?.value || DEFAULT_TAB_KEY;
         const note = ($('#in-note')?.value || '').trim();
         await addItemById(section, id, note);
         clearAddItemFields();
@@ -2134,24 +2305,12 @@ async function canLoadImage(url, timeoutMs){
 }
 
 function exportSectionsForScope(scope){
-  const allLists = [
-    { key: 'wish', title: 'Wish List' },
-    { key: 'npc', title: 'NPC' },
-    { key: 'sell', title: 'Sell' },
-    { key: 'hair', title: 'Hair' },
-    { key: 'sellSets', title: 'Sets' },
-    { key: 'buy', title: 'Buy' },
-    { key: 'pdeSlots', title: 'PDE/Slots' },
-    { key: 'furns', title: 'Furns' },
-    { key: 'pricecheck', title: 'Price Check' },
-    { key: 'fantasy', title: 'Fantasy' },
-    ...getCustomTabs().map(t => ({ key: t.key, title: t.label }))
-  ];
+  const allLists = getAllListTabDefs().map((tab)=> ({ key: tab.key, title: tab.exportTitle || tab.label }));
 
   let s = scope;
   if(s === 'active') s = getActiveTab();
   const validScopeKeys = allLists.map(x => x.key);
-  if(s !== 'all' && !validScopeKeys.includes(s)) s = 'wish';
+  if(s !== 'all' && !validScopeKeys.includes(s)) s = DEFAULT_TAB_KEY;
   if(s === 'all' || !s) return allLists;
 
   const one = allLists.find(x=>x.key === s);
@@ -2161,9 +2320,9 @@ function exportSectionsForScope(scope){
 function exportPresetConfigs(){
   return {
     // Forums Wishlist: one forum-ready post page with 50 items arranged as 10x5.
-    'forum-wishlist': { pageSize: '50', itemLimit: '50', exportScale: '100' },
-    'forum-standard': { pageSize: '25', itemLimit: '50', exportScale: '100' },
-    'archive': { pageSize: '50', itemLimit: '0', exportScale: '115' }
+    'forum-wishlist': { scope: 'wl', pageSize: '50', itemLimit: '50', exportScale: '100' },
+    'forum-standard': { scope: '', pageSize: '25', itemLimit: '50', exportScale: '100' },
+    'archive': { scope: '', pageSize: '50', itemLimit: '0', exportScale: '115' }
   };
 }
 
@@ -2171,23 +2330,27 @@ function setExportPresetValues(presetKey){
   const cfg = exportPresetConfigs()[presetKey];
   if(!cfg) return;
 
+  const scopeSel = $('#export-scope');
   const pageSizeSel = $('#export-wish-pagesize');
   const limitSel = $('#export-item-limit');
   const scaleSel = $('#export-scale');
 
+  if(scopeSel && cfg.scope) scopeSel.value = cfg.scope;
   if(pageSizeSel) pageSizeSel.value = cfg.pageSize;
   if(limitSel) limitSel.value = cfg.itemLimit;
   if(scaleSel) scaleSel.value = cfg.exportScale;
 }
 
 function detectCurrentExportPreset(){
+  const scope = $('#export-scope')?.value || 'active';
   const pageSize = $('#export-wish-pagesize')?.value || '25';
   const itemLimit = $('#export-item-limit')?.value || '0';
   const exportScale = $('#export-scale')?.value || '100';
 
   const presets = exportPresetConfigs();
   for(const [key, cfg] of Object.entries(presets)){
-    if(cfg.pageSize === pageSize
+    if((!cfg.scope || cfg.scope === scope)
+      && cfg.pageSize === pageSize
       && cfg.itemLimit === itemLimit
       && cfg.exportScale === exportScale){
       return key;
@@ -2213,7 +2376,10 @@ function updateExportAdvancedControlsVisibility(){
 
 function getExportUiOptions(){
   const presetKey = $('#export-preset')?.value || 'forum-standard';
-  const scope = $('#export-scope')?.value || 'active';
+  const presetCfg = exportPresetConfigs()[presetKey] || null;
+  const scope = (presetKey === 'forum-wishlist')
+    ? (presetCfg?.scope || 'wl')
+    : ($('#export-scope')?.value || 'active');
   const pageSizeRaw = parseInt($('#export-wish-pagesize')?.value || '25', 10);
   const pageSize = (pageSizeRaw === 8 || pageSizeRaw === 20 || pageSizeRaw === 25 || pageSizeRaw === 35 || pageSizeRaw === 50) ? pageSizeRaw : 25;
   const itemLimitRaw = parseInt($('#export-item-limit')?.value || '0', 10);
@@ -2403,23 +2569,23 @@ async function priceCheckShowDetail(itemId){
   head.appendChild(meta);
   root.appendChild(head);
 
-  // Quick action: save this item to the Price Check list (works like Wish List).
+  // Quick action: save this item to the PC list.
   {
     const actionsRow = el('div','inline');
     actionsRow.style.marginTop = '8px';
     const addBtn = el('button');
     addBtn.type = 'button';
-    addBtn.textContent = 'Add to Price Check list';
+    addBtn.textContent = 'Add to PC list';
     addBtn.addEventListener('click', async()=>{
-      state.pricecheck = state.pricecheck || [];
-      const existing = (state.pricecheck || []).find(e=>String(e?.id) === String(id));
+      state[SPECIAL_PC_TAB_KEY] = state[SPECIAL_PC_TAB_KEY] || [];
+      const existing = (state[SPECIAL_PC_TAB_KEY] || []).find(e=>String(e?.id) === String(id));
       if(existing){
-        alert('Already in your Price Check list.');
+        alert('Already in your PC list.');
         return;
       }
 
       const entry = {
-        key: keyFor('pricecheck', id),
+        key: keyFor(SPECIAL_PC_TAB_KEY, id),
         id,
         name,
         note: '',
@@ -2429,10 +2595,10 @@ async function priceCheckShowDetail(itemId){
         activeInStore: !!detail?.active_in_store,
         addedAt: Date.now()
       };
-      state.pricecheck.push(entry);
+      state[SPECIAL_PC_TAB_KEY].push(entry);
       await saveState();
       render();
-      setActiveTab('pricecheck');
+      setActiveTab(SPECIAL_PC_TAB_KEY);
     });
     actionsRow.appendChild(addBtn);
     root.appendChild(actionsRow);
@@ -2508,9 +2674,9 @@ async function priceCheckShowDetail(itemId){
       await savePriceNotes(notesById);
       setStamp(updatedAt);
 
-      // If this item exists in the saved Price Check list, mirror the note into the tile note.
+      // If this item exists in the saved PC list, mirror the note into the tile note.
       try{
-        const entry = (state.pricecheck || []).find(e=>String(e?.id) === String(id));
+        const entry = (state[SPECIAL_PC_TAB_KEY] || []).find(e=>String(e?.id) === String(id));
         if(entry){
           entry.note = nextNote;
           await saveState();
@@ -2903,8 +3069,8 @@ async function exportPng(scope, options){
   async function renderAndDownloadSectionPage(sectionKey, _title, items, pageIndex, totalPages, captureFn){
     const pageHasAnyNote = (items || []).some(it => String(it?.note || '').trim());
 
-    const isWish = sectionKey === 'wish' || sectionKey === 'npc';
-    const isPriceCheck = sectionKey === 'pricecheck';
+    const isWish = sectionKey === 'wl' || sectionKey === 'npcs';
+    const isPriceCheck = sectionKey === SPECIAL_PC_TAB_KEY;
 
     const cols = COLS;
     const tileW = TILE_W;
@@ -3372,19 +3538,6 @@ async function repairImagesInSection(section){
 
 // ---- Tab Management (Builtin + Custom) ----
 
-const BUILTIN_TABS = [
-  {key:'wish',      label:'Wish List'},
-  {key:'npc',       label:'NPC'},
-  {key:'sell',      label:'Sell'},
-  {key:'hair',      label:'Hair'},
-  {key:'sellSets',  label:'Sets'},
-  {key:'pdeSlots',  label:'PDE/Slots'},
-  {key:'furns',     label:'Furns'},
-  {key:'buy',       label:'Buy'},
-  {key:'pricecheck',label:'Price Check'},
-  {key:'fantasy',   label:'Fantasy'}
-];
-
 function escapeHtml(str){
   const d = document.createElement('div');
   d.textContent = String(str || '');
@@ -3418,22 +3571,90 @@ function updateRestoreBtn(){
 }
 
 function syncCustomTabDropdowns(){
-  const tabs = getCustomTabs();
-  ['#export-scope', '#in-section'].forEach(selId => {
-    const sel = $(selId);
-    if(!sel) return;
-    Array.from(sel.options).filter(o => o.value.startsWith('custom_')).forEach(o => o.remove());
-    for(const t of tabs){
-      const opt = document.createElement('option');
-      opt.value = t.key;
-      opt.textContent = t.label;
-      sel.appendChild(opt);
-    }
-  });
+  const allListTabs = getAllListTabDefs();
+  replaceSelectOptions($('#export-scope'), [
+    { value: 'active', label: 'Current tab' },
+    { value: 'all', label: 'All lists' },
+    ...allListTabs.map((tab)=> ({ value: tab.key, label: tab.label }))
+  ], $('#export-scope')?.value || 'active');
+  replaceSelectOptions($('#in-section'), allListTabs.map((tab)=> ({ value: tab.key, label: tab.label })), $('#in-section')?.value || getActiveTab() || DEFAULT_TAB_KEY);
+  replaceSelectOptions($('#bb-fill-list'), allListTabs.map((tab)=> ({ value: tab.key, label: tab.label })), $('#bb-fill-list')?.value || DEFAULT_TAB_KEY);
   updateExportPreviewSummary();
 }
 
 let tabDragKey = null;
+
+function buildListPanelElement(def){
+  const panel = document.createElement('section');
+  panel.className = 'card';
+  panel.dataset.panel = def.key;
+  panel.hidden = true;
+
+  const head = document.createElement('div');
+  head.className = 'section-head';
+  const h2 = document.createElement('h2');
+  h2.textContent = def.label;
+  const actions = document.createElement('div');
+  actions.className = 'inline';
+
+  const refreshBtn = document.createElement('button');
+  refreshBtn.id = 'btn-refresh-' + def.key;
+  refreshBtn.type = 'button';
+  refreshBtn.className = 'ghost';
+  refreshBtn.textContent = 'Refresh';
+  refreshBtn.addEventListener('click', ()=> refreshSection(def.key));
+
+  const repairBtn = document.createElement('button');
+  repairBtn.id = 'btn-repair-' + def.key;
+  repairBtn.type = 'button';
+  repairBtn.className = 'ghost';
+  repairBtn.textContent = 'Repair Images';
+  repairBtn.addEventListener('click', ()=> repairImagesInSection(def.key));
+
+  const clearBtn = document.createElement('button');
+  clearBtn.id = 'btn-clear-' + def.key;
+  clearBtn.type = 'button';
+  clearBtn.className = 'ghost';
+  clearBtn.textContent = 'Clear';
+  clearBtn.addEventListener('click', ()=> clearSection(def.key));
+
+  actions.append(refreshBtn, repairBtn, clearBtn);
+  head.append(h2, actions);
+  panel.appendChild(head);
+
+  const filterRow = document.createElement('div');
+  filterRow.className = 'row';
+  const filterInput = document.createElement('input');
+  filterInput.id = 'filter-' + def.key;
+  filterInput.type = 'text';
+  filterInput.placeholder = def.filterPlaceholder || `Filter ${def.label} items...`;
+  filterInput.setAttribute('aria-label', def.filterAriaLabel || `Filter ${def.label} list`);
+  filterInput.value = sectionFilters[def.key] || '';
+  let debounceTimer = 0;
+  filterInput.addEventListener('input', ()=>{
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(()=>{
+      sectionFilters[def.key] = filterInput.value;
+      render();
+    }, 200);
+  });
+  filterInput.addEventListener('keydown', (e)=>{
+    if(e.key !== 'Escape') return;
+    e.preventDefault();
+    filterInput.value = '';
+    sectionFilters[def.key] = '';
+    render();
+  });
+  filterRow.appendChild(filterInput);
+  panel.appendChild(filterRow);
+
+  const grid = document.createElement('div');
+  grid.id = 'grid-' + def.key;
+  grid.className = 'grid';
+  panel.appendChild(grid);
+
+  return panel;
+}
 
 function wireDragOnTab(btn, key){
   btn.setAttribute('draggable', 'true');
@@ -3481,17 +3702,13 @@ function buildTabsUI(){
   if(!nav) return;
   const scrollArea = nav.querySelector('.tab-scroll-area');
   if(!scrollArea) return;
+  const panelsRoot = $('#list-panels-root');
 
   // Remove all existing tab buttons from the scroll area
   scrollArea.querySelectorAll('.tab[data-tab]').forEach(el => el.remove());
-  // Remove custom panels (builtin panels remain in HTML)
-  document.querySelectorAll('[data-panel^="custom_"]').forEach(el => el.remove());
+  if(panelsRoot) panelsRoot.innerHTML = '';
 
-  const customTabs = getCustomTabs();
-  const allTabDefs = new Map([
-    ...BUILTIN_TABS.map(t => [t.key, {key: t.key, label: t.label, isCustom: false}]),
-    ...customTabs.map(t => [t.key, {key: t.key, label: t.label, isCustom: true}])
-  ]);
+  const allTabDefs = new Map(getAllListTabDefs().map((tab)=> [tab.key, tab]));
 
   for(const key of getEffectiveTabOrder()){
     const def = allTabDefs.get(key);
@@ -3506,76 +3723,9 @@ function buildTabsUI(){
     wireDragOnTab(btn, key);
     scrollArea.appendChild(btn);
 
-    // Build panel only for custom tabs (builtin panels exist in HTML)
-    if(def.isCustom){
-      const canvas = $('#export-canvas');
-      if(!canvas) continue;
-
-      const panel = document.createElement('section');
-      panel.className = 'card';
-      panel.dataset.panel = key;
-      panel.hidden = true;
-
-      const head = document.createElement('div');
-      head.className = 'section-head';
-      const h2 = document.createElement('h2');
-      h2.textContent = def.label;
-      const actions = document.createElement('div');
-      actions.className = 'inline';
-
-      const refreshBtn = document.createElement('button');
-      refreshBtn.type = 'button'; refreshBtn.className = 'ghost';
-      refreshBtn.textContent = 'Refresh';
-      refreshBtn.addEventListener('click', () => refreshSection(key));
-
-      const repairBtn = document.createElement('button');
-      repairBtn.type = 'button'; repairBtn.className = 'ghost';
-      repairBtn.textContent = 'Repair Images';
-      repairBtn.addEventListener('click', () => repairImagesInSection(key));
-
-      const clearBtn = document.createElement('button');
-      clearBtn.type = 'button'; clearBtn.className = 'ghost';
-      clearBtn.textContent = 'Clear';
-      clearBtn.addEventListener('click', () => clearSection(key));
-
-      actions.append(refreshBtn, repairBtn, clearBtn);
-      head.append(h2, actions);
-      panel.appendChild(head);
-
-      const filterRow = document.createElement('div');
-      filterRow.className = 'row';
-      const filterInput = document.createElement('input');
-      filterInput.id = 'filter-' + key;
-      filterInput.type = 'text';
-      filterInput.placeholder = 'Filter ' + def.label + ' items...';
-      filterInput.setAttribute('aria-label', 'Filter ' + def.label + ' list');
-      filterRow.appendChild(filterInput);
-      panel.appendChild(filterRow);
-
-      const grid = document.createElement('div');
-      grid.id = 'grid-' + key;
-      grid.className = 'grid';
-      panel.appendChild(grid);
-
-      canvas.parentNode.insertBefore(panel, canvas);
-
+    if(def.panelType === 'generic' && panelsRoot){
       sectionFilters[key] = sectionFilters[key] || '';
-      let debounceTimer = 0;
-      filterInput.addEventListener('input', () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          sectionFilters[key] = filterInput.value;
-          render();
-        }, 200);
-      });
-      filterInput.addEventListener('keydown', (e) => {
-        if(e.key === 'Escape'){
-          e.preventDefault();
-          filterInput.value = '';
-          sectionFilters[key] = '';
-          render();
-        }
-      });
+      panelsRoot.appendChild(buildListPanelElement(def));
     }
   }
 
@@ -3585,6 +3735,7 @@ function buildTabsUI(){
     if(activeBtn) activeBtn.classList.add('is-active');
   }
   rebuildManageSelect();
+  syncBuiltinPanelsFromConfig();
   syncCustomTabDropdowns();
 }
 
@@ -3649,7 +3800,7 @@ async function hideBuiltinTab(key){
   state.settings.hiddenTabs = hidden;
   buildTabsUI();
   await saveState();
-  if(currentTab === key) setActiveTab('wish');
+  if(currentTab === key) setActiveTab(DEFAULT_TAB_KEY);
 }
 
 async function showHiddenTabsMenu(){
@@ -3701,13 +3852,14 @@ async function deleteCustomTab(key){
   delete sectionFilters[key];
   buildTabsUI();
   await saveState();
-  if(currentTab === key) setActiveTab('wish');
+  if(currentTab === key) setActiveTab(DEFAULT_TAB_KEY);
 }
 
 document.addEventListener('DOMContentLoaded', async()=>{
   await loadState();
   applyTheme(themeFromState());
   setListDensity(getListDensity());
+  syncBuiltinPanelsFromConfig();
   buildTabsUI(); // must be before wireTabs so all tab panels exist when initial tab is restored
   // Wire tabs early so navigation works even if rendering hits a bad state.
   wireTabs();
@@ -3874,18 +4026,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
 
   $('#btn-open-sidebar')?.addEventListener('click', openSidePanel);
   // Filter inputs for each section
-  const filterInputs = [
-    { id: '#filter-wish', section: 'wish' },
-    { id: '#filter-npc', section: 'npc' },
-    { id: '#filter-sell', section: 'sell' },
-    { id: '#filter-hair', section: 'hair' },
-    { id: '#filter-sellSets', section: 'sellSets' },
-    { id: '#filter-buy', section: 'buy' },
-    { id: '#filter-pdeSlots', section: 'pdeSlots' },
-    { id: '#filter-furns', section: 'furns' },
-    { id: '#filter-pricecheck', section: 'pricecheck' },
-    { id: '#filter-fantasy', section: 'fantasy' }
-  ];
+  const filterInputs = BUILTIN_TABS.map((tab)=> ({ id: '#filter-' + tab.key, section: tab.key }));
   
   filterInputs.forEach(({ id, section }) => {
     const input = $(id);
@@ -3911,38 +4052,17 @@ document.addEventListener('DOMContentLoaded', async()=>{
     });
   });
 
-  $('#btn-clear-wish')?.addEventListener('click', ()=>clearSection('wish'));
-  $('#btn-clear-npc')?.addEventListener('click', ()=>clearSection('npc'));
-  $('#btn-clear-sell')?.addEventListener('click', ()=>clearSection('sell'));
-  $('#btn-clear-hair')?.addEventListener('click', ()=>clearSection('hair'));
-  $('#btn-clear-sellSets')?.addEventListener('click', ()=>clearSection('sellSets'));
-  $('#btn-clear-buy')?.addEventListener('click', ()=>clearSection('buy'));
-  $('#btn-clear-pdeSlots')?.addEventListener('click', ()=>clearSection('pdeSlots'));
-  $('#btn-clear-furns')?.addEventListener('click', ()=>clearSection('furns'));
-  $('#btn-clear-pricecheck')?.addEventListener('click', ()=>clearSection('pricecheck'));
-  $('#btn-clear-fantasy')?.addEventListener('click', ()=>clearSection('fantasy'));
+  BUILTIN_TABS.forEach((tab)=>{
+    $('#btn-clear-' + tab.key)?.addEventListener('click', ()=>clearSection(tab.key));
+    $('#btn-refresh-' + tab.key)?.addEventListener('click', ()=>refreshSection(tab.key));
+    $('#btn-repair-' + tab.key)?.addEventListener('click', ()=>repairImagesInSection(tab.key));
+  });
 
-  $('#btn-refresh-wish')?.addEventListener('click', ()=>refreshSection('wish'));
-  $('#btn-refresh-npc')?.addEventListener('click', ()=>refreshSection('npc'));
-  $('#btn-refresh-sell')?.addEventListener('click', ()=>refreshSection('sell'));
-  $('#btn-refresh-hair')?.addEventListener('click', ()=>refreshSection('hair'));
-  $('#btn-refresh-sellSets')?.addEventListener('click', ()=>refreshSection('sellSets'));
-  $('#btn-refresh-buy')?.addEventListener('click', ()=>refreshSection('buy'));
-  $('#btn-refresh-pdeSlots')?.addEventListener('click', ()=>refreshSection('pdeSlots'));
-  $('#btn-refresh-furns')?.addEventListener('click', ()=>refreshSection('furns'));
-  $('#btn-refresh-pricecheck')?.addEventListener('click', ()=>refreshSection('pricecheck'));
-  $('#btn-refresh-fantasy')?.addEventListener('click', ()=>refreshSection('fantasy'));
-
-  $('#btn-repair-wish')?.addEventListener('click', ()=>repairImagesInSection('wish'));
-  $('#btn-repair-npc')?.addEventListener('click', ()=>repairImagesInSection('npc'));
-  $('#btn-repair-sell')?.addEventListener('click', ()=>repairImagesInSection('sell'));
-  $('#btn-repair-hair')?.addEventListener('click', ()=>repairImagesInSection('hair'));
-  $('#btn-repair-sellSets')?.addEventListener('click', ()=>repairImagesInSection('sellSets'));
-  $('#btn-repair-buy')?.addEventListener('click', ()=>repairImagesInSection('buy'));
-  $('#btn-repair-pdeSlots')?.addEventListener('click', ()=>repairImagesInSection('pdeSlots'));
-  $('#btn-repair-furns')?.addEventListener('click', ()=>repairImagesInSection('furns'));
-  $('#btn-repair-pricecheck')?.addEventListener('click', ()=>repairImagesInSection('pricecheck'));
-  $('#btn-repair-fantasy')?.addEventListener('click', ()=>repairImagesInSection('fantasy'));
+  const persistVisibleState = ()=>{ void saveLocalStateSnapshot(); };
+  window.addEventListener('pagehide', persistVisibleState);
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'hidden') persistVisibleState();
+  });
 
   // Keep state updated across devices.
   chrome.storage.onChanged.addListener((changes, area)=>{
@@ -3951,23 +4071,27 @@ document.addEventListener('DOMContentLoaded', async()=>{
 
     // Update settings from SYNC_SETTINGS_KEY if changed
     if(changes[SYNC_SETTINGS_KEY]){
-      const settings = changes[SYNC_SETTINGS_KEY].newValue || {};
-      state.settings = state.settings || {};
-      state.settings.theme = isKnownThemeValue(settings.theme) ? settings.theme : 'classic';
-      state.settings.imageSource = (settings.imageSource === 'cdn' || settings.imageSource === 'info' || settings.imageSource === 'auto')
-        ? settings.imageSource
-        : 'cdn';
-      state.settings.allowCopyText = !!settings.allowCopyText;
+      const prevSettings = normalizeSettingsFromStorage(state.settings);
+      const incomingSettings = normalizeSettingsFromStorage(changes[SYNC_SETTINGS_KEY].newValue || {});
+      const nextSettings = pickPreferredSettings(prevSettings, incomingSettings);
+      const acceptedIncoming = areSettingsEqual(nextSettings, incomingSettings);
       const prevCtJson = JSON.stringify(state.settings.customTabs || []);
       const prevTabOrderJson = JSON.stringify(state.settings.tabOrder || []);
       const prevHiddenJson = JSON.stringify(state.settings.hiddenTabs || []);
-      const newCt = (Array.isArray(settings.customTabs) ? settings.customTabs : []).filter(t => t?.key && t?.label);
-      state.settings.customTabs = newCt;
-      state.settings.tabOrder = Array.isArray(settings.tabOrder) ? settings.tabOrder : [];
-      state.settings.hiddenTabs = Array.isArray(settings.hiddenTabs) ? settings.hiddenTabs : [];
-      if(JSON.stringify(newCt) !== prevCtJson
+      state.settings = nextSettings;
+      for(const tab of nextSettings.customTabs){
+        if(tab?.key && !Array.isArray(state[tab.key])) state[tab.key] = [];
+      }
+      if(JSON.stringify(nextSettings.customTabs) !== prevCtJson
         || JSON.stringify(state.settings.tabOrder) !== prevTabOrderJson
         || JSON.stringify(state.settings.hiddenTabs) !== prevHiddenJson) buildTabsUI();
+
+      void saveLocalStateSnapshot();
+      if(!acceptedIncoming){
+        void storageSet('sync', SYNC_SETTINGS_KEY, nextSettings).then((res)=>{
+          if(!res.ok) console.warn('sync settings reconcile failed:', res.error);
+        });
+      }
     }
 
     applyTheme(themeFromState());

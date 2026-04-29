@@ -1,0 +1,7 @@
+{
+  "name": "yoboards",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  }
+}

@@ -12,4 +12,11 @@ PC
 WL
 WTB
 
-- 
+- Ensure all tabs work with the export data feature in settings. Clean up tabs that are discarded.
+- The feature to add tabs is important and each new tab created by users much also be part of the export/backup system.
+- Run testing for bugs. Set up a variety of unit tests and run them.
+
+Todo:
+1. Update the UI to look polished enough to sell to users. 
+2. Set up security of extension so users can't rip the coding for themselves. (Note: GitHub is private)
+3. Set up payment system. $5 to use for life with updates.

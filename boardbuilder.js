@@ -495,8 +495,9 @@
   }
 
   async function saveQuickFillPrefs(listName, startIndex, useNotes){
+    const fallbackListName = String(qs('#bb-fill-list')?.options?.[0]?.value || '');
     const prefs = {
-      listName: String(listName || 'wish'),
+      listName: String(listName || fallbackListName),
       startIndex: Number(startIndex) || 1,
       useNotes: !!useNotes
     };
@@ -525,7 +526,7 @@
     const startIn = qs('#bb-fill-start');
     const useNotes = qs('#bb-fill-use-notes');
 
-    const listName = String(listSel?.value || 'wish');
+    const listName = String(listSel?.value || listSel?.options?.[0]?.value || '');
     let startIndex = clamp(startIn?.value || 1, 1, 999999);
     const useNoteCaptions = !!useNotes?.checked;
 
