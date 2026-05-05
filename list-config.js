@@ -29,7 +29,6 @@
     sellSets: 'general',
     buy: 'wtb',
     pdeSlots: 'pde',
-    furns: 'furns',
     pricecheck: 'pc',
     fantasy: 'general'
   };

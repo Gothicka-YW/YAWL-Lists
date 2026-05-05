@@ -19,9 +19,9 @@
       <h1>YoLists</h1>
       <div class="sub">YoBoards • Lists • Exports PNG</div>
       <div id="export-preview-summary" class="hint export-preview-summary" aria-live="polite"></div>
-      <button id="btn-export" class="primary lists-export-primary" type="button">Export PNG</button>
     </div>
     <div class="export-controls">
+      <button id="btn-export" class="primary lists-export-primary" type="button">Export PNG</button>
       <div class="inline export-controls-row">
         <select id="export-scope" aria-label="Export scope">
           <option value="active">Current tab</option>
@@ -92,10 +92,12 @@
 
   <nav class="tabs" aria-label="Template Sections">
     <div class="tab-scroll-area"></div>
-    <select id="sel-tab-manage" title="Manage tabs" aria-label="Manage tabs">
-      <option value="">&#9881; Manage</option>
-    </select>
-    <button id="btn-add-tab" type="button" title="Add a custom list tab">+</button>
+    <div class="tabs-tools">
+      <select id="sel-tab-manage" title="Manage tabs" aria-label="Manage tabs">
+        <option value="">&#9881; Manage</option>
+      </select>
+      <button id="btn-add-tab" type="button" title="Add a custom list tab">+</button>
+    </div>
   </nav>
 
   <div id="list-panels-root"></div>

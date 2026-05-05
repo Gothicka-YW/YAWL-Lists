@@ -287,6 +287,11 @@ body[data-surface="sidepanel"] #suite-selection > .header{
   align-items:flex-end;
 }
 
+.export-controls .lists-export-primary{
+  align-self:flex-end;
+  margin:0 0 2px;
+}
+
 .export-controls-row{
   display:flex;
   gap:8px;
@@ -308,10 +313,6 @@ body[data-surface="sidepanel"] #suite-selection > .header{
 body[data-surface="sidepanel"] #suite-selection .export-controls{
   max-width:none;
   width:fit-content;
-}
-
-body[data-surface="sidepanel"] #suite-selection .lists-export-primary{
-  margin-top:9px;
 }
 
 #export-scope{width:19ch}
@@ -441,8 +442,9 @@ button:disabled{
 
 .tabs{
   display:flex;
-  gap:6px;
-  align-items:center;
+  flex-direction:column;
+  gap:8px;
+  align-items:stretch;
   margin:10px 0;
   padding:8px;
   border:1px solid var(--border);
@@ -457,11 +459,20 @@ button:disabled{
   gap:6px;
   align-items:center;
   overflow-x:auto;
-  flex:1 1 0;
+  flex:1 1 auto;
   min-width:0;
+  width:100%;
   padding:2px 0;
   scrollbar-width:thin;
   scrollbar-color:var(--border) transparent;
+}
+
+.tabs-tools{
+  display:flex;
+  gap:6px;
+  align-items:center;
+  justify-content:flex-end;
+  width:100%;
 }
 
 .tab-scroll-area::-webkit-scrollbar{height:4px}
@@ -498,6 +509,7 @@ button:disabled{
 
 #sel-tab-manage{
   flex-shrink:0;
+  width:min(220px, 100%);
   padding:6px 8px;
   border:1px solid var(--border);
   border-radius:8px;
@@ -756,11 +768,13 @@ a{
     text-align:center;
   }
 
-  .tabs{
+  .tabs-tools{
     flex-wrap:wrap;
+    justify-content:stretch;
   }
 
   #sel-tab-manage{
+    width:auto;
     max-width:none;
     flex:1 1 140px;
   }

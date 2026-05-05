@@ -99,10 +99,10 @@ Reshape YoBoards Lists around the requested tab model, make list/export/backup b
 - [x] Choose a lightweight browser-extension-friendly test setup.
 - [x] Start with pure-function coverage before DOM-heavy tests.
 - [x] Add tests for tab migration logic.
-- [ ] Add tests for custom tab serialization/deserialization.
+- [x] Add tests for custom tab serialization/deserialization.
 - [ ] Add tests for last-known-state save and reload behavior.
-- [ ] Add tests for export scope generation.
-- [ ] Add tests for backup payload creation and restore validation.
+- [x] Add tests for export scope generation.
+- [x] Add tests for backup payload creation and restore validation.
 - [ ] Add smoke tests for tab creation, deletion, hide, and restore flows.
 - [ ] Run manual regression testing in Chrome for popup and side panel.
 
@@ -113,8 +113,8 @@ Reshape YoBoards Lists around the requested tab model, make list/export/backup b
 - [ ] `getTabsFullOrder()`
 - [ ] `getEffectiveTabOrder()`
 - [ ] save/load state helpers
-- [ ] `exportSectionsForScope()`
-- [ ] backup/import validators
+- [x] `exportSectionsForScope()`
+- [x] backup/import validators
 
 ## Phase 5: release-quality UI polish
 

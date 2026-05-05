@@ -58,6 +58,15 @@ async function applyPanelBehaviorFromPrefs() {
   } catch (e) {
     console.warn('Could not set side panel behavior:', e);
   }
+
+  try {
+    await chrome.action.setPopup({
+      popup: prefs.defaultSurface === 'popup' ? 'popup.html' : ''
+    });
+  } catch (e) {
+    console.warn('Could not set action popup path:', e);
+  }
+
   return prefs;
 }
 
@@ -73,17 +82,40 @@ function getCurrentWindowId() {
   });
 }
 
-async function openPopupWindow() {
+async function openExtensionPopup(options) {
+  const opts = (options && typeof options === 'object') ? options : {};
+  const restoreAfterOpen = !!opts.restoreAfterOpen;
+  let previousPopup = '';
+
   try {
-    await chrome.windows.create({
-      url: chrome.runtime.getURL('popup.html'),
-      type: 'popup',
-      width: 560,
-      height: 780
-    });
+    if (chrome.action?.getPopup) {
+      previousPopup = await chrome.action.getPopup({}) || '';
+    }
+  } catch {}
+
+  try {
+    if (chrome.action?.setPopup) {
+      await chrome.action.setPopup({ popup: 'popup.html' });
+    }
+    if (!chrome.action?.openPopup) {
+      return false;
+    }
+    await chrome.action.openPopup();
+
+    if (restoreAfterOpen && chrome.action?.setPopup) {
+      await chrome.action.setPopup({ popup: previousPopup || '' });
+    }
+
     return true;
   } catch (e) {
-    console.error('Failed to open popup window:', e);
+    console.error('Failed to open extension popup:', e);
+
+    if (restoreAfterOpen && chrome.action?.setPopup) {
+      try {
+        await chrome.action.setPopup({ popup: previousPopup || '' });
+      } catch {}
+    }
+
     return false;
   }
 }
@@ -112,13 +144,13 @@ chrome.action.onClicked.addListener((tab) => {
   void (async () => {
     const prefs = await loadUiPrefs();
     if (prefs.defaultSurface === 'popup') {
-      await openPopupWindow();
+      await openExtensionPopup({ restoreAfterOpen: false });
       return;
     }
 
     const opened = await openSidePanel(tab?.windowId);
     if (!opened) {
-      await openPopupWindow();
+      await openExtensionPopup({ restoreAfterOpen: true });
     }
   })();
 });
@@ -140,8 +172,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
     if (msg?.type === 'YB_OPEN_SURFACE') {
       const surface = normalizeSurface(msg?.surface);
+      const prefs = await loadUiPrefs();
       const ok = surface === 'popup'
-        ? await openPopupWindow()
+        ? await openExtensionPopup({ restoreAfterOpen: prefs.defaultSurface !== 'popup' })
         : await openSidePanel(msg?.windowId);
       sendResponse({ ok });
       return;

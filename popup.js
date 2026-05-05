@@ -2584,6 +2584,10 @@ function parseDataBackupPayloadText(text){
   };
 }
 
+function setStateForTests(nextState){
+  state = normalizeStateFromStorage(nextState);
+}
+
 function readFileText(file){
   return new Promise((resolve, reject)=>{
     try{
@@ -4068,6 +4072,7 @@ async function deleteCustomTab(key){
   if(currentTab === key) setActiveTab(DEFAULT_TAB_KEY);
 }
 
+if(typeof document !== 'undefined' && document?.addEventListener){
 document.addEventListener('DOMContentLoaded', async()=>{
   await loadState();
   applyTheme(themeFromState());
@@ -4343,3 +4348,17 @@ document.addEventListener('DOMContentLoaded', async()=>{
     render();
   });
 });
+}
+
+  if(typeof module === 'object' && module.exports){
+    module.exports = {
+      buildDataBackupPayload,
+      parseDataBackupPayloadText,
+      normalizeImportedListEntries,
+      backupTabKeysFromState,
+      exportSectionsForScope,
+      normalizeSettingsFromStorage,
+      normalizeStateFromStorage,
+      setStateForTests
+    };
+  }

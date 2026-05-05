@@ -107,7 +107,6 @@ test('legacy map stays aligned with expected old keys', () => {
     sellSets: 'general',
     buy: 'wtb',
     pdeSlots: 'pde',
-    furns: 'furns',
     pricecheck: 'pc',
     fantasy: 'general'
   });
