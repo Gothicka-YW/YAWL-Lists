@@ -54,7 +54,7 @@ Reshape YoBoards Lists around the requested tab model, make list/export/backup b
 - [x] `wish` likely becomes `wl`.
 - [x] `buy` likely becomes `wtb`.
 - [x] `pricecheck` likely becomes `pc`.
-- [ ] `pdeSlots` must be split into separate `pde` and `slots` lists.
+- [x] `pdeSlots` must be split into separate `pde` and `slots` lists.
 - [x] Decide whether `sell`, `sellSets`, and `fantasy` map into `general`, `zynga`, `hats`, `hhs`, or should be retired.
 - [x] Decide whether `npc` should stay as `npc` internally or be renamed to `npcs` everywhere.
 
@@ -66,7 +66,7 @@ Reshape YoBoards Lists around the requested tab model, make list/export/backup b
 - [x] Update the Add Item section dropdown to use the new tab definitions.
 - [x] Update built-in HTML panels or generate them from config to reduce duplication.
 - [x] Remove orphaned UI/actions for discarded tabs.
-- [ ] Add a one-time state migration so existing users do not lose data.
+- [x] Add a one-time state migration so existing users do not lose data.
 - [x] Audit every list-changing workflow so changes are saved immediately or on a clearly defined safe trigger.
 - [x] Verify custom tab creation, item add/remove, and tab management all write to persistent storage reliably.
 
@@ -74,16 +74,16 @@ Reshape YoBoards Lists around the requested tab model, make list/export/backup b
 
 - [x] `popup.js`
 - [x] `popup.html`
-- [ ] `popup.css`
+- [x] `popup.css`
 
 ## Phase 3: export and backup parity
 
 - [x] Audit every export path so all built-in tabs and all custom tabs are treated consistently.
 - [x] Confirm export scope labels reflect the new names.
-- [ ] Ensure custom tabs are included in any backup/export payload, not just PNG export.
-- [ ] Add a proper data backup flow in Settings if that feature does not already exist.
-- [ ] Add a matching restore/import flow with validation.
-- [ ] Version the backup schema so future tab changes are recoverable.
+- [x] Ensure custom tabs are included in any backup/export payload, not just PNG export.
+- [x] Add a proper data backup flow in Settings if that feature does not already exist.
+- [x] Add a matching restore/import flow with validation.
+- [x] Version the backup schema so future tab changes are recoverable.
 - [x] Define recovery behavior if local and sync state drift from each other.
 
 ### Acceptance criteria

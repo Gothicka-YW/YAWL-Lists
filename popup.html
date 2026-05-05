@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>YoBoards</title>
   <link rel="stylesheet" href="fonts.css">
-  <link rel="stylesheet" href="popup.css">
+  <link rel="stylesheet" href="ui.css">
 </head>
 <body data-page="sidepanel" data-surface="popup">
   <nav class="suite-nav" aria-label="Suite modules">
@@ -211,7 +211,7 @@
       <div class="row">
         <label class="lbl" for="suite-theme-select">Color theme</label>
         <select id="suite-theme-select">
-          <option value="classic">Classic (Black & White)</option>
+          <option value="classic">Classic</option>
           <option value="dark">Dark</option>
           <option value="valentine">Valentine's Day</option>
           <option value="ocean">Ocean</option>
@@ -252,6 +252,18 @@
           Allow copying text from item cards
         </label>
         <div class="hint">Enable text selection on item cards. When disabled, cards are easier to drag and reorder.</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Data Backup</h2>
+      <div class="row">
+        <div class="inline" style="gap:8px; flex-wrap:wrap;">
+          <button id="btn-export-data-backup" type="button">Export Data Backup (.json)</button>
+          <button id="btn-import-data-backup" class="ghost" type="button">Import Data Backup (.json)</button>
+        </div>
+        <input id="input-import-data-backup" type="file" accept="application/json,.json" hidden>
+        <div class="hint">Export includes built-in and custom tabs, list items, tab order, and hidden tab settings. Import replaces current list data.</div>
       </div>
     </section>
 

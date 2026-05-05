@@ -40,6 +40,14 @@
     return value === 'popup' ? 'popup' : 'sidepanel';
   }
 
+  function safeNow() {
+    try {
+      return Date.now();
+    } catch {
+      return 0;
+    }
+  }
+
   function setActiveModule(moduleName) {
     const module = normalizeModule(moduleName);
 
@@ -110,14 +118,15 @@
     return (res.value && typeof res.value === 'object') ? res.value : {};
   }
 
-  async function updateLocalSettingsMirror(patch) {
+  async function updateLocalSettingsMirror(patch, lastSavedAt) {
     const res = await storageGet('local', LOCAL_KEY);
     const current = (res.value && typeof res.value === 'object') ? res.value : {};
     const next = {
       ...current,
       settings: {
         ...(current.settings && typeof current.settings === 'object' ? current.settings : {}),
-        ...patch
+        ...patch,
+        lastSavedAt: Number.isFinite(lastSavedAt) && lastSavedAt > 0 ? lastSavedAt : safeNow()
       }
     };
     const result = await storageSet('local', LOCAL_KEY, next);
@@ -128,15 +137,17 @@
 
   async function updateSyncSettings(patch) {
     const current = await readSyncSettings();
+    const nextSavedAt = safeNow();
     const next = {
       ...current,
-      ...patch
+      ...patch,
+      lastSavedAt: nextSavedAt
     };
     const result = await storageSet('sync', SYNC_SETTINGS_KEY, next);
     if (!result.ok) {
       console.warn('Could not save sync settings:', result.error);
     }
-    await updateLocalSettingsMirror(patch);
+    await updateLocalSettingsMirror(patch, nextSavedAt);
     return next;
   }
 

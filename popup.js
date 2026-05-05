@@ -234,14 +234,21 @@ function flashDropZoneMessage(message, kind){
 }
 flashDropZoneMessage._timer = 0;
 
-function revealSectionItem(section, itemKey){
+function revealSectionItem(section, itemKey, opts){
   if(!section || !itemKey) return;
-  setActiveTab(section);
+  const options = (opts && typeof opts === 'object') ? opts : {};
+  const activeTab = getActiveTab();
+  const switchedTabs = activeTab !== section;
+  if(switchedTabs) setActiveTab(section);
 
   requestAnimationFrame(()=>{
     const tile = document.querySelector(`.tile[data-section="${CSS.escape(section)}"][data-key="${CSS.escape(itemKey)}"]`);
     if(!tile) return;
-    tile.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+    const shouldScroll = options.scroll === true || options.scroll === 'always'
+      || (options.scroll === 'if-tab-switch' && switchedTabs);
+    if(shouldScroll){
+      tile.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+    }
     tile.classList.add('is-added-highlight');
     clearTimeout(revealSectionItem._timers.get(tile));
     const timer = setTimeout(()=>{
@@ -2434,6 +2441,212 @@ function pick(obj, keys){
   return undefined;
 }
 
+function cloneJsonValue(value, fallback){
+  try{
+    return JSON.parse(JSON.stringify(value));
+  }catch{}
+  if(Array.isArray(fallback)) return [...fallback];
+  if(fallback && typeof fallback === 'object') return { ...fallback };
+  return fallback;
+}
+
+function backupTabKeysFromState(sourceState){
+  const safeState = (sourceState && typeof sourceState === 'object') ? sourceState : {};
+  const settings = normalizeSettingsFromStorage(safeState.settings || {});
+  const customKeys = settings.customTabs
+    .map((tab)=> String(tab?.key || '').trim())
+    .filter(Boolean);
+  return Array.from(new Set([...getBuiltinTabKeys(), ...customKeys]));
+}
+
+function buildDataBackupPayload(sourceState){
+  const safeState = (sourceState && typeof sourceState === 'object') ? sourceState : state;
+  const settings = normalizeSettingsFromStorage(safeState.settings || {});
+  const lists = {};
+
+  for(const key of backupTabKeysFromState({ settings })){
+    const entries = Array.isArray(safeState[key]) ? safeState[key] : [];
+    lists[key] = cloneJsonValue(entries, []);
+  }
+
+  let appVersion = '';
+  try{ appVersion = String(chrome?.runtime?.getManifest?.()?.version || ''); }catch{}
+
+  return {
+    kind: 'yo_boards_backup',
+    schemaVersion: 1,
+    exportedAt: new Date().toISOString(),
+    appVersion,
+    settings: {
+      theme: settings.theme,
+      imageSource: settings.imageSource,
+      allowCopyText: !!settings.allowCopyText,
+      customTabs: cloneJsonValue(settings.customTabs, []),
+      tabOrder: cloneJsonValue(settings.tabOrder, []),
+      hiddenTabs: cloneJsonValue(settings.hiddenTabs, [])
+    },
+    lists
+  };
+}
+
+async function exportDataBackupFile(){
+  const payload = buildDataBackupPayload(state);
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  await downloadBlob(blob, `yoboards-data-backup-${stamp}.json`);
+
+  const customCount = Array.isArray(payload?.settings?.customTabs) ? payload.settings.customTabs.length : 0;
+  alert(`Backup exported. Included ${customCount} custom tab${customCount === 1 ? '' : 's'}.`);
+}
+
+function normalizeImportedListEntries(rawEntries, sectionKey){
+  if(!Array.isArray(rawEntries)) return [];
+  const out = [];
+  const seenKeys = new Set();
+
+  for(const raw of rawEntries){
+    if(!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+
+    const idRaw = Number(raw.id);
+    const itemId = Number.isFinite(idRaw) && idRaw > 0 ? Math.trunc(idRaw) : 0;
+
+    let itemKey = String(raw.key || '').trim();
+    if(!itemKey || seenKeys.has(itemKey)){
+      itemKey = keyFor(sectionKey, itemId || (out.length + 1));
+      while(seenKeys.has(itemKey)) itemKey = keyFor(sectionKey, itemId || (out.length + 1));
+    }
+    seenKeys.add(itemKey);
+
+    const fallbackName = itemId > 0 ? `Item ${itemId}` : 'Unnamed Item';
+    const itemName = String(raw.name || fallbackName).trim().slice(0, 140) || fallbackName;
+    const itemNote = String(raw.note || '').trim().slice(0, 200);
+
+    const one = {
+      key: itemKey,
+      id: itemId,
+      name: itemName,
+      note: itemNote,
+      imageUrl: String(raw.imageUrl || '').trim(),
+      ywCdnImageUrl: String(raw.ywCdnImageUrl || '').trim(),
+      ywInfoImageUrl: String(raw.ywInfoImageUrl || '').trim(),
+      activeInStore: !!raw.activeInStore
+    };
+
+    const addedAtRaw = Number(raw.addedAt);
+    if(Number.isFinite(addedAtRaw) && addedAtRaw > 0) one.addedAt = Math.trunc(addedAtRaw);
+
+    out.push(one);
+  }
+
+  return out;
+}
+
+function parseDataBackupPayloadText(text){
+  const parsed = safeJsonParse(String(text || ''));
+  if(!parsed || typeof parsed !== 'object' || Array.isArray(parsed)){
+    throw new Error('Invalid JSON file.');
+  }
+
+  if(String(parsed.kind || '') !== 'yo_boards_backup'){
+    throw new Error('This is not a YoBoards backup file.');
+  }
+
+  const schemaVersion = Number(parsed.schemaVersion);
+  if(!Number.isFinite(schemaVersion) || schemaVersion < 1){
+    throw new Error('Backup schema version is missing or invalid.');
+  }
+  if(schemaVersion !== 1){
+    throw new Error(`Backup schema version ${schemaVersion} is not supported in this build.`);
+  }
+
+  if(!parsed.settings || typeof parsed.settings !== 'object' || Array.isArray(parsed.settings)){
+    throw new Error('Backup file is missing settings data.');
+  }
+  if(!parsed.lists || typeof parsed.lists !== 'object' || Array.isArray(parsed.lists)){
+    throw new Error('Backup file is missing list data.');
+  }
+
+  const settings = normalizeSettingsFromStorage(parsed.settings);
+  const next = {
+    ...createBuiltinListState(),
+    settings
+  };
+
+  for(const key of backupTabKeysFromState({ settings })){
+    next[key] = normalizeImportedListEntries(parsed.lists[key], key);
+  }
+
+  return {
+    schemaVersion,
+    exportedAt: String(parsed.exportedAt || ''),
+    state: next
+  };
+}
+
+function readFileText(file){
+  return new Promise((resolve, reject)=>{
+    try{
+      const reader = new FileReader();
+      reader.onerror = ()=> reject(new Error('Could not read the selected file.'));
+      reader.onload = ()=> resolve(String(reader.result || ''));
+      reader.readAsText(file);
+    }catch{
+      reject(new Error('Could not read the selected file.'));
+    }
+  });
+}
+
+function refreshSettingsUiFromState(){
+  const themeSelect = $('#suite-theme-select') || $('#theme-select');
+  if(themeSelect) themeSelect.value = themeFromState();
+
+  const imageSourceSelect = $('#suite-image-source-select') || $('#image-source-select');
+  if(imageSourceSelect) imageSourceSelect.value = imageSourceFromState();
+
+  const allowCopyTextCheckbox = $('#suite-allow-copy-text');
+  if(allowCopyTextCheckbox) allowCopyTextCheckbox.checked = !!state?.settings?.allowCopyText;
+}
+
+async function applyImportedBackupState(importedState){
+  state = normalizeStateFromStorage(importedState);
+  sectionFilters = createSectionFilterState();
+  for(const tab of getCustomTabs()){
+    sectionFilters[tab.key] = sectionFilters[tab.key] || '';
+  }
+
+  buildTabsUI();
+  const nextTab = isKnownTab(currentTab) ? currentTab : DEFAULT_TAB_KEY;
+  setActiveTab(nextTab);
+  applyTheme(themeFromState());
+  refreshSettingsUiFromState();
+
+  await saveState();
+  render();
+}
+
+async function importDataBackupFile(file){
+  if(!file) return false;
+  const text = await readFileText(file);
+  const parsed = parseDataBackupPayloadText(text);
+  const nextState = parsed.state;
+
+  const incomingItems = countItemsInState(nextState);
+  const incomingCustomTabs = Array.isArray(nextState?.settings?.customTabs) ? nextState.settings.customTabs.length : 0;
+  const incomingDate = parsed.exportedAt ? `\nBackup date: ${parsed.exportedAt}` : '';
+  const ok = confirm(
+    `Import backup from "${file.name}"?\n\n`
+    + `This will replace your current lists and tab settings.\n`
+    + `Incoming data: ${incomingItems} item(s), ${incomingCustomTabs} custom tab(s).`
+    + incomingDate
+  );
+  if(!ok) return false;
+
+  await applyImportedBackupState(nextState);
+  alert(`Backup import complete. Restored ${incomingItems} item(s) across ${incomingCustomTabs} custom tab(s).`);
+  return true;
+}
+
 async function copyTextToClipboard(text){
   const t = String(text || '');
   if(!t) return false;
@@ -4022,6 +4235,34 @@ document.addEventListener('DOMContentLoaded', async()=>{
       itemLimit: opts.itemLimit,
       exportScale: opts.exportScale
     });
+  });
+
+  $('#btn-export-data-backup')?.addEventListener('click', async()=>{
+    try{
+      await exportDataBackupFile();
+    }catch(e){
+      console.error('data backup export failed', e);
+      alert('Could not export backup JSON. Please try again.');
+    }
+  });
+
+  $('#btn-import-data-backup')?.addEventListener('click', ()=>{
+    const picker = $('#input-import-data-backup');
+    if(picker) picker.click();
+  });
+
+  $('#input-import-data-backup')?.addEventListener('change', async(e)=>{
+    const input = e.currentTarget;
+    const file = input?.files?.[0] || null;
+    try{
+      if(file) await importDataBackupFile(file);
+    }catch(err){
+      console.error('data backup import failed', err);
+      const msg = (err && err.message) ? err.message : 'Could not import backup JSON. Please verify the file and try again.';
+      alert(msg);
+    }finally{
+      if(input) input.value = '';
+    }
   });
 
   $('#btn-open-sidebar')?.addEventListener('click', openSidePanel);
