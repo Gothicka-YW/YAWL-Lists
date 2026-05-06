@@ -4010,11 +4010,87 @@ function rebuildManageSelect(){
   }
 }
 
+function ensureStateSettingsContainer(targetState){
+  const safeState = (targetState && typeof targetState === 'object') ? targetState : {};
+  const currentSettings = (safeState.settings && typeof safeState.settings === 'object') ? safeState.settings : {};
+  safeState.settings = {
+    ...currentSettings,
+    customTabs: Array.isArray(currentSettings.customTabs) ? currentSettings.customTabs : [],
+    tabOrder: Array.isArray(currentSettings.tabOrder) ? currentSettings.tabOrder : [],
+    hiddenTabs: Array.isArray(currentSettings.hiddenTabs) ? currentSettings.hiddenTabs : []
+  };
+  return safeState;
+}
+
+function applyHideBuiltinTabState(targetState, key){
+  const safeState = ensureStateSettingsContainer(targetState);
+  const tabKey = String(key || '').trim();
+  if(!tabKey) return false;
+  const hidden = Array.isArray(safeState.settings.hiddenTabs) ? [...safeState.settings.hiddenTabs] : [];
+  if(hidden.includes(tabKey)) return false;
+  hidden.push(tabKey);
+  safeState.settings.hiddenTabs = hidden;
+  return true;
+}
+
+function applyRestoreHiddenTabState(targetState, key){
+  const safeState = ensureStateSettingsContainer(targetState);
+  const tabKey = String(key || '').trim();
+  if(!tabKey) return false;
+  const hidden = Array.isArray(safeState.settings.hiddenTabs) ? [...safeState.settings.hiddenTabs] : [];
+  if(!hidden.includes(tabKey)) return false;
+  safeState.settings.hiddenTabs = hidden.filter(k => k !== tabKey);
+  return true;
+}
+
+function applyCreateCustomTabState(targetState, targetSectionFilters, key, label){
+  const safeState = ensureStateSettingsContainer(targetState);
+  const safeFilters = (targetSectionFilters && typeof targetSectionFilters === 'object') ? targetSectionFilters : {};
+  const tabKey = String(key || '').trim();
+  const trimmedLabel = String(label || '').trim().slice(0, 30);
+  if(!tabKey || !trimmedLabel) return false;
+
+  const tabs = Array.isArray(safeState.settings.customTabs) ? safeState.settings.customTabs : [];
+  if(tabs.some((tab)=> tab?.key === tabKey)) return false;
+
+  safeState.settings.customTabs = [...tabs, { key: tabKey, label: trimmedLabel }];
+  if(!Array.isArray(safeState[tabKey])) safeState[tabKey] = [];
+  safeFilters[tabKey] = '';
+  return true;
+}
+
+function buildDeleteCustomTabPrompt(tabLabel, count){
+  const safeLabel = String(tabLabel || 'Custom Tab');
+  const n = Number(count) || 0;
+  return n > 0
+    ? 'Delete "' + safeLabel + '" and its ' + n + ' item' + (n === 1 ? '' : 's') + '? This cannot be undone.'
+    : 'Delete "' + safeLabel + '"?';
+}
+
+function applyDeleteCustomTabState(targetState, targetSectionFilters, key){
+  const safeState = ensureStateSettingsContainer(targetState);
+  const safeFilters = (targetSectionFilters && typeof targetSectionFilters === 'object') ? targetSectionFilters : null;
+  const tabKey = String(key || '').trim();
+  if(!tabKey) return { changed: false, itemCount: 0, tabLabel: '' };
+
+  const tabs = Array.isArray(safeState.settings.customTabs) ? safeState.settings.customTabs : [];
+  const tab = tabs.find((t)=> t && t.key === tabKey);
+  if(!tab) return { changed: false, itemCount: 0, tabLabel: '' };
+
+  const count = Array.isArray(safeState[tabKey]) ? safeState[tabKey].length : 0;
+  safeState.settings.customTabs = tabs.filter((t)=> t && t.key !== tabKey);
+  if(Array.isArray(safeState.settings.tabOrder)){
+    safeState.settings.tabOrder = safeState.settings.tabOrder.filter((k)=> k !== tabKey);
+  }
+
+  delete safeState[tabKey];
+  if(safeFilters) delete safeFilters[tabKey];
+
+  return { changed: true, itemCount: count, tabLabel: String(tab.label || '') };
+}
+
 async function hideBuiltinTab(key){
-  state.settings = state.settings || {};
-  const hidden = Array.isArray(state.settings.hiddenTabs) ? [...state.settings.hiddenTabs] : [];
-  if(!hidden.includes(key)) hidden.push(key);
-  state.settings.hiddenTabs = hidden;
+  if(!applyHideBuiltinTabState(state, key)) return;
   buildTabsUI();
   await saveState();
   if(currentTab === key) setActiveTab(DEFAULT_TAB_KEY);
@@ -4030,7 +4106,7 @@ async function showHiddenTabsMenu(){
   const idx = parseInt(input.trim(), 10) - 1;
   if(isNaN(idx) || idx < 0 || idx >= hidden.length) return;
   const keyToRestore = hidden[idx];
-  state.settings.hiddenTabs = hidden.filter(k => k !== keyToRestore);
+  if(!applyRestoreHiddenTabState(state, keyToRestore)) return;
   buildTabsUI();
   await saveState();
   setActiveTab(keyToRestore);
@@ -4038,13 +4114,8 @@ async function showHiddenTabsMenu(){
 
 async function createCustomTab(){
   const label = prompt('Enter a name for the new tab:');
-  if(!label || !label.trim()) return;
-  const trimmed = label.trim().slice(0, 30);
   const key = genCustomTabKey();
-  state.settings = state.settings || {};
-  state.settings.customTabs = [...getCustomTabs(), { key, label: trimmed }];
-  state[key] = [];
-  sectionFilters[key] = '';
+  if(!applyCreateCustomTabState(state, sectionFilters, key, label)) return;
   buildTabsUI();
   await saveState();
   setActiveTab(key);
@@ -4056,17 +4127,10 @@ async function deleteCustomTab(key){
   const tab = tabs.find(t => t.key === key);
   if(!tab) return;
   const count = Array.isArray(state[key]) ? state[key].length : 0;
-  const msg = count > 0
-    ? 'Delete "' + tab.label + '" and its ' + count + ' item' + (count === 1 ? '' : 's') + '? This cannot be undone.'
-    : 'Delete "' + tab.label + '"?';
+  const msg = buildDeleteCustomTabPrompt(tab.label, count);
   if(!confirm(msg)) return;
-  state.settings.customTabs = tabs.filter(t => t.key !== key);
-  // Remove from tabOrder if present
-  if(Array.isArray(state.settings.tabOrder)){
-    state.settings.tabOrder = state.settings.tabOrder.filter(k => k !== key);
-  }
-  delete state[key];
-  delete sectionFilters[key];
+  const deleted = applyDeleteCustomTabState(state, sectionFilters, key);
+  if(!deleted.changed) return;
   buildTabsUI();
   await saveState();
   if(currentTab === key) setActiveTab(DEFAULT_TAB_KEY);
@@ -4223,9 +4287,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
     if(action === 'hide') await hideBuiltinTab(key);
     else if(action === 'delete') await deleteCustomTab(key);
     else if(action === 'restore'){
-      state.settings = state.settings || {};
-      const h = Array.isArray(state.settings.hiddenTabs) ? [...state.settings.hiddenTabs] : [];
-      state.settings.hiddenTabs = h.filter(k => k !== key);
+      if(!applyRestoreHiddenTabState(state, key)) return;
       buildTabsUI();
       await saveState();
       setActiveTab(key);
@@ -4357,6 +4419,16 @@ document.addEventListener('DOMContentLoaded', async()=>{
       normalizeImportedListEntries,
       backupTabKeysFromState,
       exportSectionsForScope,
+      defaultState,
+      getTabsFullOrder,
+      getEffectiveTabOrder,
+      applyHideBuiltinTabState,
+      applyRestoreHiddenTabState,
+      applyCreateCustomTabState,
+      buildDeleteCustomTabPrompt,
+      applyDeleteCustomTabState,
+      pickPreferredSettings,
+      mergePersistedListState,
       normalizeSettingsFromStorage,
       normalizeStateFromStorage,
       setStateForTests

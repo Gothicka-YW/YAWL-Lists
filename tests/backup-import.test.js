@@ -122,3 +122,29 @@ test('backup parser restores built-in and custom lists safely', () => {
 
   assert.equal(restored.custom_ignored, undefined);
 });
+
+test('backup round-trip preserves tab order and hidden tabs', () => {
+  const source = makeState({
+    general: [{ key: 'general:1:a', id: 1, name: 'General Item' }],
+    custom_trade: [{ key: 'custom_trade:2:a', id: 2, name: 'Trade Item' }],
+    settings: {
+      theme: 'ocean',
+      imageSource: 'auto',
+      allowCopyText: true,
+      customTabs: [{ key: 'custom_trade', label: 'Trade' }],
+      tabOrder: ['wl', 'custom_trade', 'pde', 'slots'],
+      hiddenTabs: ['hats', 'custom_trade'],
+      lastSavedAt: 54321
+    }
+  });
+
+  const payload = buildDataBackupPayload(source);
+  const parsed = parseDataBackupPayloadText(JSON.stringify(payload));
+  const restored = parsed.state;
+
+  assert.deepEqual(restored.settings.tabOrder, ['wl', 'custom_trade', 'pde', 'slots']);
+  assert.deepEqual(restored.settings.hiddenTabs, ['hats', 'custom_trade']);
+  assert.deepEqual(restored.settings.customTabs, [{ key: 'custom_trade', label: 'Trade' }]);
+  assert.ok(Array.isArray(restored.custom_trade));
+  assert.equal(restored.custom_trade.length, 1);
+});

@@ -63,6 +63,38 @@ test('export scope generation includes custom tabs and handles invalid scopes', 
   assert.deepEqual(activeFallback, [{ key: 'general', title: 'General' }]);
 });
 
+test('built-in export scope stays aligned with renamed and split tab set', () => {
+  setStateForTests(makeBaseState({
+    settings: {
+      theme: 'classic',
+      imageSource: 'cdn',
+      allowCopyText: false,
+      customTabs: [{ key: 'custom_trade', label: 'Trade' }],
+      tabOrder: ['general', 'pde', 'slots', 'custom_trade'],
+      hiddenTabs: [],
+      lastSavedAt: 0
+    },
+    custom_trade: [{ id: 77, name: 'Trade Item' }]
+  }));
+
+  const all = exportSectionsForScope('all');
+  const builtinSections = all.slice(0, listConfigApi.BUILTIN_TABS.length);
+
+  assert.deepEqual(
+    builtinSections.map((section) => section.key),
+    listConfigApi.BUILTIN_TABS.map((tab) => tab.key)
+  );
+  assert.deepEqual(
+    builtinSections.map((section) => section.title),
+    listConfigApi.BUILTIN_TABS.map((tab) => tab.exportTitle || tab.label)
+  );
+
+  const keys = all.map((section) => section.key);
+  assert.ok(keys.includes('pde'));
+  assert.ok(keys.includes('slots'));
+  assert.ok(!keys.includes('pdeSlots'));
+});
+
 test('custom tab settings normalization filters and sanitizes stored values', () => {
   const normalized = normalizeSettingsFromStorage({
     theme: 'ocean',

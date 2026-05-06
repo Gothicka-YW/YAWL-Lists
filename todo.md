@@ -88,11 +88,11 @@ Reshape YoBoards Lists around the requested tab model, make list/export/backup b
 
 ### Acceptance criteria
 
-- [ ] Built-in tabs export correctly after the rename/split work.
+- [x] Built-in tabs export correctly after the rename/split work.
 - [x] A user-created tab appears in export scope controls automatically.
 - [x] A user-created tab and its items survive normal extension reopen/reload behavior.
 - [ ] A backup created on one machine restores correctly on another machine.
-- [ ] Hidden tabs and tab order survive backup/restore.
+- [x] Hidden tabs and tab order survive backup/restore.
 
 ## Phase 4: testing and bug coverage
 
@@ -100,19 +100,19 @@ Reshape YoBoards Lists around the requested tab model, make list/export/backup b
 - [x] Start with pure-function coverage before DOM-heavy tests.
 - [x] Add tests for tab migration logic.
 - [x] Add tests for custom tab serialization/deserialization.
-- [ ] Add tests for last-known-state save and reload behavior.
+- [x] Add tests for last-known-state save and reload behavior.
 - [x] Add tests for export scope generation.
 - [x] Add tests for backup payload creation and restore validation.
-- [ ] Add smoke tests for tab creation, deletion, hide, and restore flows.
+- [x] Add smoke tests for tab creation, deletion, hide, and restore flows.
 - [ ] Run manual regression testing in Chrome for popup and side panel.
 
 ### Good first test targets
 
-- [ ] `defaultState()`
+- [x] `defaultState()`
 - [x] tab migration helper
-- [ ] `getTabsFullOrder()`
-- [ ] `getEffectiveTabOrder()`
-- [ ] save/load state helpers
+- [x] `getTabsFullOrder()`
+- [x] `getEffectiveTabOrder()`
+- [x] save/load state helpers
 - [x] `exportSectionsForScope()`
 - [x] backup/import validators
 
