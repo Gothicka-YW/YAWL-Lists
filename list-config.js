@@ -34,6 +34,10 @@
     fantasy: 'general'
   };
 
+  const LEGACY_SPLIT_TAB_KEY_MAP = {
+    pdeSlots: ['pde', 'slots']
+  };
+
   function createBuiltinListState(source){
     const src = (source && typeof source === 'object') ? source : {};
     const out = {};
@@ -68,20 +72,37 @@
     return safe;
   }
 
-  function normalizeBuiltinTabKey(key){
+  function normalizeBuiltinTabKeys(key){
     const raw = String(key || '').trim();
-    if(!raw) return '';
-    if(getBuiltinTabDef(raw)) return raw;
-    return LEGACY_TAB_KEY_MAP[raw] || '';
+    if(!raw) return [];
+    if(getBuiltinTabDef(raw)) return [raw];
+    if(Array.isArray(LEGACY_SPLIT_TAB_KEY_MAP[raw])){
+      return LEGACY_SPLIT_TAB_KEY_MAP[raw].filter((splitKey)=> !!getBuiltinTabDef(splitKey));
+    }
+    const mapped = LEGACY_TAB_KEY_MAP[raw] || '';
+    return mapped ? [mapped] : [];
+  }
+
+  function normalizeBuiltinTabKey(key){
+    const keys = normalizeBuiltinTabKeys(key);
+    return keys[0] || '';
   }
 
   function normalizeBuiltinKeyList(values){
     const list = Array.isArray(values) ? values : [];
     const out = [];
     for(const value of list){
-      const key = normalizeBuiltinTabKey(value) || String(value || '').trim();
-      if(!key || out.includes(key)) continue;
-      out.push(key);
+      const expanded = normalizeBuiltinTabKeys(value);
+      if(expanded.length){
+        for(const key of expanded){
+          if(!key || out.includes(key)) continue;
+          out.push(key);
+        }
+        continue;
+      }
+      const fallback = String(value || '').trim();
+      if(!fallback || out.includes(fallback)) continue;
+      out.push(fallback);
     }
     return out;
   }
@@ -93,6 +114,13 @@
     const tabOrder = Array.isArray(settings.tabOrder) ? settings.tabOrder : [];
     const hiddenTabs = Array.isArray(settings.hiddenTabs) ? settings.hiddenTabs : [];
     return [...tabOrder, ...hiddenTabs].some((key)=> !!LEGACY_TAB_KEY_MAP[String(key || '').trim()]);
+  }
+
+  function pickSplitTargetForLegacyEntry(legacyKey, entry){
+    if(legacyKey !== 'pdeSlots') return '';
+    const safe = (entry && typeof entry === 'object') ? entry : {};
+    const text = [safe.name, safe.note, safe.url, safe.link].map((part)=> String(part || '').toLowerCase()).join(' ');
+    return /\bslots?\b/.test(text) ? 'slots' : 'pde';
   }
 
   function migrateBuiltinListsFromSource(source, makeKey){
@@ -107,6 +135,15 @@
 
     for(const [legacyKey, nextKey] of Object.entries(LEGACY_TAB_KEY_MAP)){
       if(!Array.isArray(src[legacyKey]) || !nextKey) continue;
+      const splitTargets = LEGACY_SPLIT_TAB_KEY_MAP[legacyKey];
+      if(Array.isArray(splitTargets) && splitTargets.length){
+        for(const entry of src[legacyKey]){
+          const target = pickSplitTargetForLegacyEntry(legacyKey, entry) || nextKey;
+          if(!migrated[target]) continue;
+          migrated[target] = [...migrated[target], cloneEntryForSection(entry, target, makeKey)];
+        }
+        continue;
+      }
       const migratedEntries = src[legacyKey].map((entry)=> cloneEntryForSection(entry, nextKey, makeKey));
       migrated[nextKey] = [...(migrated[nextKey] || []), ...migratedEntries];
     }
@@ -119,6 +156,7 @@
     DEFAULT_TAB_KEY,
     SPECIAL_PC_TAB_KEY,
     LEGACY_TAB_KEY_MAP,
+    LEGACY_SPLIT_TAB_KEY_MAP,
     createBuiltinListState,
     createSectionFilterState,
     getBuiltinTabDef,

@@ -259,21 +259,21 @@ body[data-surface="sidepanel"] #suite-selection > .header{
 .export-controls{
   display:flex;
   flex-direction:column;
-  gap:7px;
+  gap:6px;
   min-width:0;
-  max-width:408px;
+  max-width:390px;
   align-items:flex-end;
 }
 
 .export-controls-head{
   display:flex;
-  flex-direction:column;
-  align-items:flex-end;
-  gap:2px;
+  align-items:center;
+  justify-content:flex-end;
+  width:100%;
 }
 
 .export-controls-title{
-  font-size:11px;
+  font-size:10.4px;
   letter-spacing:0.08em;
   text-transform:uppercase;
   color:var(--muted);
@@ -287,7 +287,7 @@ body[data-surface="sidepanel"] #suite-selection > .header{
 
 .export-controls-row{
   display:flex;
-  gap:8px;
+  gap:6px;
   align-items:center;
   min-width:0;
   flex-wrap:nowrap;
@@ -308,8 +308,8 @@ body[data-surface="sidepanel"] #suite-selection .export-controls{
   width:fit-content;
 }
 
-#export-scope{width:19ch}
-#export-preset{width:24ch}
+#export-scope{width:14ch}
+#export-preset{width:18ch}
 #export-wish-pagesize{width:13ch}
 #export-item-limit{width:12ch}
 #export-scale{width:12ch}
@@ -566,25 +566,26 @@ button:disabled{
 
 .tabs-tools{
   display:grid;
-  grid-template-columns:minmax(0, 1fr) minmax(170px, 220px) auto;
+  grid-template-columns:minmax(0, 1fr) minmax(160px, 200px) auto;
   gap:8px;
   align-items:center;
   width:100%;
-  padding:7px 8px;
+  padding:6px 7px;
   border:1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
   border-radius:12px;
-  background:color-mix(in srgb, var(--surface2) 58%, var(--surface));
+  background:color-mix(in srgb, var(--surface2) 46%, var(--surface));
 }
 
 .tabs-tools-summary{
   display:flex;
-  flex-direction:column;
+  align-items:center;
+  flex-wrap:wrap;
   min-width:0;
-  gap:2px;
+  gap:6px;
 }
 
 .tabs-tools-label{
-  font-size:10.8px;
+  font-size:10.2px;
   letter-spacing:0.08em;
   text-transform:uppercase;
   color:var(--muted);
@@ -597,7 +598,7 @@ button:disabled{
   text-overflow:ellipsis;
   white-space:nowrap;
   color:var(--muted);
-  font-size:10.8px;
+  font-size:10.4px;
 }
 
 .tab-scroll-area::-webkit-scrollbar{height:4px}
@@ -633,14 +634,14 @@ button:disabled{
 #btn-add-tab{padding:6px 11px;flex-shrink:0}
 
 .tabs-add-btn{
-  min-width:84px;
+  min-width:78px;
   justify-self:end;
-  font-size:11.4px;
+  font-size:11px;
 }
 
 #sel-tab-manage{
   width:100%;
-  padding:6px 8px;
+  padding:5px 8px;
   border:1px solid var(--border);
   border-radius:8px;
   background:var(--surface2);

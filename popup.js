@@ -2574,9 +2574,70 @@ function cloneJsonValue(value, fallback){
   return fallback;
 }
 
+function isCustomListKey(key){
+  return /^custom_[a-z0-9_]+$/i.test(String(key || '').trim());
+}
+
+function labelFromCustomListKey(key){
+  const raw = String(key || '').trim();
+  const base = raw.replace(/^custom_/i, '').replace(/[_-]+/g, ' ').trim();
+  if(!base) return 'Custom';
+  const label = base
+    .split(/\s+/)
+    .map((part)=> part ? (part[0].toUpperCase() + part.slice(1)) : '')
+    .join(' ')
+    .trim();
+  return label.slice(0, 30) || 'Custom';
+}
+
+function inferCustomTabsFromLists(maybeListsSource){
+  const source = (maybeListsSource && typeof maybeListsSource === 'object') ? maybeListsSource : {};
+  const inferred = [];
+  for(const [rawKey, entries] of Object.entries(source)){
+    const key = String(rawKey || '').trim();
+    if(!isCustomListKey(key)) continue;
+    if(!Array.isArray(entries)) continue;
+    inferred.push({ key, label: labelFromCustomListKey(key) });
+  }
+  return inferred;
+}
+
+function normalizeSettingsWithInferredCustomTabs(maybeSettings, maybeListsSource){
+  const base = normalizeSettingsFromStorage(maybeSettings);
+  const inferred = inferCustomTabsFromLists(maybeListsSource);
+  const mergedCustomTabs = mergeCustomTabDefs(base.customTabs, inferred);
+  return normalizeSettingsFromStorage({
+    ...base,
+    customTabs: mergedCustomTabs
+  });
+}
+
+async function downloadBlobFile(blob, filename){
+  if(!blob) throw new Error('No blob to download.');
+  if(typeof document === 'undefined' || !document?.createElement) {
+    throw new Error('Download is unavailable in this context.');
+  }
+  const safeName = String(filename || 'download.bin').trim() || 'download.bin';
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = safeName;
+  a.style.display = 'none';
+
+  const parent = document.body || document.documentElement;
+  if(parent && parent.appendChild) parent.appendChild(a);
+
+  try{
+    a.click();
+  }finally{
+    if(a.parentNode) a.parentNode.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 3000);
+  }
+}
+
 function backupTabKeysFromState(sourceState){
   const safeState = (sourceState && typeof sourceState === 'object') ? sourceState : {};
-  const settings = normalizeSettingsFromStorage(safeState.settings || {});
+  const settings = normalizeSettingsWithInferredCustomTabs(safeState.settings, safeState);
   const customKeys = settings.customTabs
     .map((tab)=> String(tab?.key || '').trim())
     .filter(Boolean);
@@ -2585,7 +2646,7 @@ function backupTabKeysFromState(sourceState){
 
 function buildDataBackupPayload(sourceState){
   const safeState = (sourceState && typeof sourceState === 'object') ? sourceState : state;
-  const settings = normalizeSettingsFromStorage(safeState.settings || {});
+  const settings = normalizeSettingsWithInferredCustomTabs(safeState.settings, safeState);
   const lists = {};
 
   for(const key of backupTabKeysFromState({ settings })){
@@ -2618,7 +2679,7 @@ async function exportDataBackupFile(){
   const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  await downloadBlob(blob, `wtb-wts-data-backup-${stamp}.json`);
+  await downloadBlobFile(blob, `wtb-wts-data-backup-${stamp}.json`);
 
   const customCount = Array.isArray(payload?.settings?.customTabs) ? payload.settings.customTabs.length : 0;
   alert(`Backup exported. Included ${customCount} custom tab${customCount === 1 ? '' : 's'}.`);
@@ -2692,7 +2753,7 @@ function parseDataBackupPayloadText(text){
     throw new Error('Backup file is missing list data.');
   }
 
-  const settings = normalizeSettingsFromStorage(parsed.settings);
+  const settings = normalizeSettingsWithInferredCustomTabs(parsed.settings, parsed.lists);
   const next = {
     ...createBuiltinListState(),
     settings
@@ -3398,16 +3459,6 @@ async function exportPng(scope, options){
     setTimeout(()=>URL.revokeObjectURL(url), 2000);
   }
 
-  async function downloadBlob(blob, filename){
-    if(!blob) throw new Error('No blob to download.');
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.click();
-    setTimeout(()=>URL.revokeObjectURL(url), 3000);
-  }
-
   async function renderAndDownloadSectionPage(sectionKey, _title, items, pageIndex, totalPages, captureFn){
     const pageHasAnyNote = (items || []).some(it => String(it?.note || '').trim());
 
@@ -3723,7 +3774,7 @@ async function exportPng(scope, options){
   if(useZipExport && zipEntries.length){
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
     const zipBlob = await buildZipBlob(zipEntries);
-    await downloadBlob(zipBlob, `wtb-wts-export-${stamp}.zip`);
+    await downloadBlobFile(zipBlob, `wtb-wts-export-${stamp}.zip`);
   }
 }
 
@@ -4039,9 +4090,9 @@ function wireDragOnTab(btn, key){
   });
 }
 
-function formatTabCountLabel(count, singular, plural){
+function formatTabCountLabel(count, label){
   const n = Math.max(0, Number(count) || 0);
-  return n + ' ' + (n === 1 ? singular : plural);
+  return n + ' ' + label;
 }
 
 function updateTabsManagerSummary(){
@@ -4052,9 +4103,9 @@ function updateTabsManagerSummary(){
   const visibleCount = getEffectiveTabOrder().length;
   const customCount = getCustomTabs().length;
 
-  const visibleLabel = formatTabCountLabel(visibleCount, 'visible tab', 'visible tabs');
-  const customLabel = formatTabCountLabel(customCount, 'custom tab', 'custom tabs');
-  const hiddenLabel = formatTabCountLabel(hidden.length, 'hidden tab', 'hidden tabs');
+  const visibleLabel = formatTabCountLabel(visibleCount, 'visible');
+  const customLabel = formatTabCountLabel(customCount, 'custom');
+  const hiddenLabel = formatTabCountLabel(hidden.length, 'hidden');
 
   meta.textContent = `${visibleLabel} • ${customLabel} • ${hiddenLabel}`;
 }
@@ -4156,7 +4207,7 @@ function rebuildManageSelect(){
 
   const placeholder = sel.options[0];
   const availableActions = visibleBuiltins.length + visibleCustom.length + hidden.length;
-  if(placeholder) placeholder.textContent = availableActions > 0 ? 'Choose tab action...' : 'No tab actions available';
+  if(placeholder) placeholder.textContent = availableActions > 0 ? 'Tab action...' : 'No actions available';
   sel.disabled = availableActions <= 0;
 
   updateTabsManagerSummary();

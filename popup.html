@@ -22,19 +22,18 @@
     </div>
     <div class="export-controls">
       <div class="export-controls-head">
-        <span class="export-controls-title">Share &amp; Export</span>
-        <span class="hint">Choose scope, then export PNG.</span>
+        <span class="export-controls-title">Export</span>
       </div>
       <button id="btn-export" class="primary lists-export-primary" type="button">Export PNG</button>
       <div class="inline export-controls-row">
         <select id="export-scope" aria-label="Export scope">
-          <option value="active">Current tab</option>
+          <option value="active">Current</option>
           <option value="all">All lists</option>
         </select>
         <select id="export-preset" aria-label="Export preset">
-          <option value="forum-wishlist">Preset: Forums Wishlist</option>
-          <option value="forum-standard" selected>Preset: Standard</option>
-          <option value="archive">Preset: Archive</option>
+          <option value="forum-wishlist">Forums Wishlist</option>
+          <option value="forum-standard" selected>Standard</option>
+          <option value="archive">Archive</option>
         </select>
       </div>
       <div id="export-advanced-controls" class="inline export-controls-row">
@@ -120,13 +119,13 @@
     <div class="tab-scroll-area"></div>
     <div class="tabs-tools">
       <div class="tabs-tools-summary">
-        <span class="tabs-tools-label">Tab Manager</span>
+        <span class="tabs-tools-label">Tabs</span>
         <span id="tabs-meta" class="tabs-meta" aria-live="polite"></span>
       </div>
       <select id="sel-tab-manage" title="Manage tabs" aria-label="Manage tabs">
-        <option value="">Choose tab action...</option>
+        <option value="">Tab action...</option>
       </select>
-      <button id="btn-add-tab" class="primary tabs-add-btn" type="button" title="Add a custom list tab">New tab</button>
+      <button id="btn-add-tab" class="primary tabs-add-btn" type="button" title="Add a custom list tab">Add tab</button>
     </div>
   </nav>
 

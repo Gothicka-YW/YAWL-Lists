@@ -63,6 +63,29 @@ test('backup payload includes custom tabs and list data', () => {
   assert.equal(payload.lists.custom_trade[0].name, 'Custom Trade Item');
 });
 
+test('backup payload includes user custom list buckets even if metadata is missing', () => {
+  const source = makeState({
+    general: [{ key: 'general:1:a', id: 1, name: 'General Item' }],
+    custom_missingmeta: [{ key: 'custom_missingmeta:2:a', id: 2, name: 'Missing Metadata Item' }],
+    settings: {
+      theme: 'classic',
+      imageSource: 'cdn',
+      allowCopyText: false,
+      customTabs: [],
+      tabOrder: ['general'],
+      hiddenTabs: [],
+      lastSavedAt: 123
+    }
+  });
+
+  const payload = buildDataBackupPayload(source);
+
+  assert.ok(Array.isArray(payload.lists.custom_missingmeta));
+  assert.equal(payload.lists.custom_missingmeta.length, 1);
+  assert.ok(Array.isArray(payload.settings.customTabs));
+  assert.deepEqual(payload.settings.customTabs, [{ key: 'custom_missingmeta', label: 'Missingmeta' }]);
+});
+
 test('backup parser rejects unsupported schema versions', () => {
   const unsupported = JSON.stringify({
     kind: 'wtb_wts_backup',
@@ -108,7 +131,10 @@ test('backup parser restores built-in and custom lists safely', () => {
   assert.equal(restored.settings.theme, 'classic');
   assert.equal(restored.settings.imageSource, 'cdn');
   assert.equal(restored.settings.allowCopyText, true);
-  assert.deepEqual(restored.settings.customTabs, [{ key: 'custom_collectors', label: 'Collectors' }]);
+  assert.deepEqual(restored.settings.customTabs, [
+    { key: 'custom_collectors', label: 'Collectors' },
+    { key: 'custom_ignored', label: 'Ignored' }
+  ]);
   assert.ok(restored.settings.tabOrder.includes('custom_collectors'));
   assert.ok(restored.settings.hiddenTabs.includes('hats'));
 
@@ -120,7 +146,8 @@ test('backup parser restores built-in and custom lists safely', () => {
   const keys = restored.custom_collectors.map((entry) => entry.key);
   assert.equal(new Set(keys).size, keys.length);
 
-  assert.equal(restored.custom_ignored, undefined);
+  assert.ok(Array.isArray(restored.custom_ignored));
+  assert.equal(restored.custom_ignored.length, 1);
 });
 
 test('backup parser accepts legacy backup kind', () => {

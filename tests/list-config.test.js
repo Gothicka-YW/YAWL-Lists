@@ -6,6 +6,7 @@ const {
   DEFAULT_TAB_KEY,
   SPECIAL_PC_TAB_KEY,
   LEGACY_TAB_KEY_MAP,
+  LEGACY_SPLIT_TAB_KEY_MAP,
   createBuiltinListState,
   createSectionFilterState,
   getBuiltinTabDef,
@@ -40,12 +41,13 @@ test('legacy key normalization maps old keys to new built-in keys', () => {
   assert.equal(normalizeBuiltinTabKey('wish'), 'wl');
   assert.equal(normalizeBuiltinTabKey('npc'), 'npcs');
   assert.equal(normalizeBuiltinTabKey('pricecheck'), 'pc');
+  assert.equal(normalizeBuiltinTabKey('pdeSlots'), 'pde');
   assert.equal(normalizeBuiltinTabKey('general'), 'general');
   assert.equal(normalizeBuiltinTabKey('unknown'), '');
 
   assert.deepEqual(
-    normalizeBuiltinKeyList(['wish', 'wl', 'pricecheck', 'pc', 'npc', 'npc', 'custom_1']),
-    ['wl', 'pc', 'npcs', 'custom_1']
+    normalizeBuiltinKeyList(['wish', 'wl', 'pricecheck', 'pc', 'npc', 'npc', 'pdeSlots', 'custom_1']),
+    ['wl', 'pc', 'npcs', 'pde', 'slots', 'custom_1']
   );
 });
 
@@ -62,7 +64,10 @@ test('migration helper preserves data and remaps legacy sections safely', () => 
     sell: [{ id: 12, key: 'sell:12:old', name: 'Sell Item' }],
     sellSets: [{ id: 13, key: 'sellSets:13:old', name: 'Set Item' }],
     buy: [{ id: 14, key: 'buy:14:old', name: 'Buy Item' }],
-    pdeSlots: [{ id: 15, key: 'pdeSlots:15:old', name: 'PDE Item' }],
+    pdeSlots: [
+      { id: 15, key: 'pdeSlots:15:old', name: 'PDE Item' },
+      { id: 21, key: 'pdeSlots:21:old', name: 'Lucky Slots Item' }
+    ],
     furns: [{ id: 16, key: 'furns:16:old', name: 'Furn Item' }],
     pricecheck: [{ id: 17, key: 'pricecheck:17:old', name: 'PC Item' }],
     fantasy: [{ id: 18, name: 'Fantasy Item' }],
@@ -84,6 +89,9 @@ test('migration helper preserves data and remaps legacy sections safely', () => 
 
   assert.equal(migrated.pde.length, 1);
   assert.equal(migrated.pde[0].key, 'pde:15:old');
+
+  assert.equal(migrated.slots.length, 1);
+  assert.equal(migrated.slots[0].key, 'slots:21:old');
 
   assert.equal(migrated.pc.length, 1);
   assert.equal(migrated.pc[0].key, 'pc:17:old');
@@ -109,5 +117,9 @@ test('legacy map stays aligned with expected old keys', () => {
     pdeSlots: 'pde',
     pricecheck: 'pc',
     fantasy: 'general'
+  });
+
+  assert.deepEqual(LEGACY_SPLIT_TAB_KEY_MAP, {
+    pdeSlots: ['pde', 'slots']
   });
 });

@@ -119,7 +119,7 @@ Reshape WTB & WTS Lists around the requested tab model, make list/export/backup 
 ## Phase 5: release-quality UI polish
 
 - [x] Tighten the information hierarchy in the Lists module.
-- [ ] Reduce visual clutter in the export controls and tab management UI.
+- [x] Reduce visual clutter in the export controls and tab management UI.
 - [x] Improve spacing, typography, and button consistency.
 - [x] Make custom-tab management feel intentional instead of utility-only.
 - [x] Review popup vs sidepanel layout behavior on smaller widths.
@@ -158,7 +158,7 @@ Reshape WTB & WTS Lists around the requested tab model, make list/export/backup 
 
 - [x] Create the final old-to-new tab mapping table.
 - [x] Refactor built-in tab definitions into one shared config.
-- [ ] Split `pdeSlots` into `pde` and `slots` with migration logic.
+- [x] Split `pdeSlots` into `pde` and `slots` with migration logic.
 - [x] Audit save triggers for custom tabs and list item mutations.
 - [x] Rename export scope labels and add backup/import requirements.
 - [x] Add the first test file for migration and tab-order helpers.
