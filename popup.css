@@ -12,15 +12,15 @@
 }
 
 body[data-theme="dark"]{
-  --bg:#0b1220;
-  --surface:#0f172a;
-  --surface2:#111c33;
-  --border:#22304a;
-  --text:#e5e7eb;
-  --muted:#9ca3af;
-  --primary:#14b8a6;
-  --primaryText:#06121a;
-  --pill:#1f2a44;
+  --bg:#130f1f;
+  --surface:#1d1730;
+  --surface2:#2a2144;
+  --border:#4a3a70;
+  --text:#ede9fb;
+  --muted:#b8abd8;
+  --primary:#8f6ad8;
+  --primaryText:#f7f2ff;
+  --pill:#2a2144;
 }
 
 body[data-theme="valentine"]{
@@ -59,6 +59,18 @@ body[data-theme="forest"]{
   --pill:#dcfce7;
 }
 
+body[data-theme="naturefantasy"]{
+  --bg:#f5f1e6;
+  --surface:#fffaf0;
+  --surface2:#ece3ce;
+  --border:#c0b18f;
+  --text:#2f2a1f;
+  --muted:#635b42;
+  --primary:#5f6f3a;
+  --primaryText:#f8f5ea;
+  --pill:#ece3ce;
+}
+
 body[data-theme="sunset"]{
   --bg:#fff7ed;
   --surface:#ffffff;
@@ -71,77 +83,40 @@ body[data-theme="sunset"]{
   --pill:#ffedd5;
 }
 
-/* Arcane / medieval fantasy */
-body[data-theme="arcane"]{
-  --bg:#0d0a16;
-  --surface:#151026;
-  --surface2:#1f1635;
-  --border:#3b2d5e;
-  --text:#f3f0ff;
-  --muted:#b9a8dc;
-  --primary:#d4af37;
-  --primaryText:#151026;
-  --pill:#221842;
-}
-
-body[data-theme="cyberpunk"]{
-  --bg:#0f0218;
-  --surface:#1a0b2e;
-  --surface2:#2d1b4e;
-  --border:#6a4c93;
-  --text:#f0e6ff;
-  --muted:#b794f6;
-  --primary:#e100ff;
-  --primaryText:#ffffff;
-  --pill:#2d1b4e;
-}
-
 body[data-theme="autumn"]{
-  --bg:#fef3e2;
+  --bg:#fff7f7;
   --surface:#ffffff;
-  --surface2:#fde7c8;
-  --border:#e6c9a8;
-  --text:#3e2723;
-  --muted:#795548;
-  --primary:#d84315;
+  --surface2:#ffe0e0;
+  --border:#ff8a8a;
+  --text:#4b0a0a;
+  --muted:#8a2b2b;
+  --primary:#dc2626;
   --primaryText:#ffffff;
-  --pill:#fde7c8;
+  --pill:#ffe0e0;
 }
 
-body[data-theme="midnight"]{
-  --bg:#000510;
-  --surface:#0a1128;
-  --surface2:#0f1936;
-  --border:#1e3a5f;
-  --text:#d8e3f0;
-  --muted:#6b8caf;
-  --primary:#5e72e4;
+body[data-theme="prored"]{
+  --bg:#f6efef;
+  --surface:#fff8f8;
+  --surface2:#f3e2e2;
+  --border:#d8b0b0;
+  --text:#2c1b1b;
+  --muted:#6f4a4a;
+  --primary:#b03a3a;
   --primaryText:#ffffff;
-  --pill:#0f1936;
-}
-
-body[data-theme="cherryblossom"]{
-  --bg:#fff5f7;
-  --surface:#ffffff;
-  --surface2:#ffe4e9;
-  --border:#ffc0cb;
-  --text:#4a1c29;
-  --muted:#8b5a6f;
-  --primary:#ff69b4;
-  --primaryText:#ffffff;
-  --pill:#ffe4e9;
+  --pill:#f3e2e2;
 }
 
 body[data-theme="emerald"]{
-  --bg:#e8f5e9;
-  --surface:#ffffff;
-  --surface2:#c8e6c9;
-  --border:#81c784;
-  --text:#1b5e20;
-  --muted:#388e3c;
-  --primary:#2e7d32;
-  --primaryText:#ffffff;
-  --pill:#c8e6c9;
+  --bg:#0c1118;
+  --surface:#141c28;
+  --surface2:#1e2b40;
+  --border:#2f425e;
+  --text:#e7eef8;
+  --muted:#9fb1c8;
+  --primary:#38bdf8;
+  --primaryText:#061320;
+  --pill:#1e2b40;
 }
 
 *{box-sizing:border-box}

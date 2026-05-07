@@ -118,6 +118,15 @@ let lastPriceCheckItem = null;
 // Section filter state (search/filter within each list)
 let sectionFilters = createSectionFilterState();
 
+const SYNC_SETTINGS_DEBOUNCE_MS = 900;
+let lastSettingsContentFingerprint = '';
+let lastSyncedSettingsPayloadJson = '';
+let queuedSyncSettings = null;
+let syncSettingsDebounceTimer = 0;
+let syncSettingsRetryTimer = 0;
+let syncSettingsRetryAt = 0;
+let syncSettingsWriteInFlight = false;
+
 const ACTIVE_TAB_KEY = 'yo_boards_active_tab_v1';
 const TAB_DRAFTS_KEY = 'yo_boards_tab_drafts_v1';
 
@@ -250,7 +259,7 @@ function flashDropZoneMessage(message, kind){
   const zone = $('#drop-zone');
   if(!zone) return;
 
-  const baseMessage = zone.dataset.baseMessage || zone.textContent.trim() || 'Drop an item link here to add it';
+  const baseMessage = zone.dataset.baseMessage || zone.textContent.trim() || 'Drag an item card from yoworld.info to add it.';
   zone.dataset.baseMessage = baseMessage;
   zone.textContent = String(message || baseMessage);
   zone.classList.toggle('is-success', kind === 'success');
@@ -412,12 +421,19 @@ wireTabs._delegated = false;
 wireTabs._delegatedDnD = false;
 
 function isKnownThemeValue(t){
-  return t === 'classic' || t === 'dark' || t === 'valentine' || t === 'ocean' || t === 'forest' || t === 'sunset' || t === 'arcane' || t === 'cyberpunk' || t === 'autumn' || t === 'midnight' || t === 'cherryblossom' || t === 'emerald';
+  return t === 'classic' || t === 'dark' || t === 'valentine' || t === 'ocean' || t === 'forest' || t === 'naturefantasy' || t === 'sunset' || t === 'autumn' || t === 'prored' || t === 'emerald';
+}
+
+function normalizeThemeValue(theme){
+  const t = (typeof theme === 'string') ? theme.toLowerCase() : '';
+  if(t === 'arcane') return 'naturefantasy';
+  if(t === 'cyberpunk' || t === 'midnight') return 'dark';
+  if(t === 'cherryblossom') return 'prored';
+  return isKnownThemeValue(t) ? t : 'classic';
 }
 
 function themeFromState(){
-  const t = state?.settings?.theme;
-  return isKnownThemeValue(t) ? t : 'classic';
+  return normalizeThemeValue(state?.settings?.theme);
 }
 
 function imageSourceFromState(){
@@ -437,37 +453,19 @@ function applyTheme(theme){
 function exportPalette(theme){
   if(theme === 'dark'){
     return {
-      bg: '#0b1220',
-      tileBg: '#0f172a',
-      tileBorder: '#22304a',
-      text: '#e5e7eb',
-      muted: '#9ca3af',
-      imgFallback: '#111c33',
-      badgeBg: '#1f2a44',
-      badgeBorder: '#14b8a6',
+      bg: '#130f1f',
+      tileBg: '#1d1730',
+      tileBorder: '#4a3a70',
+      text: '#ede9fb',
+      muted: '#b8abd8',
+      imgFallback: '#2a2144',
+      badgeBg: '#2a2144',
+      badgeBorder: '#8f6ad8',
       badgeBorderAlt: '#ef4444',
-      badgeText: '#e5e7eb',
-      priceBg: '#1f2a44',
-      priceBorder: '#14b8a6',
-      priceText: '#e5e7eb'
-    };
-  }
-
-  if(theme === 'arcane'){
-    return {
-      bg: '#0d0a16',
-      tileBg: '#151026',
-      tileBorder: '#3b2d5e',
-      text: '#f3f0ff',
-      muted: '#b9a8dc',
-      imgFallback: '#1a1430',
-      badgeBg: '#221842',
-      badgeBorder: '#d4af37',
-      badgeBorderAlt: '#ef4444',
-      badgeText: '#f3f0ff',
-      priceBg: '#221842',
-      priceBorder: '#d4af37',
-      priceText: '#f3f0ff'
+      badgeText: '#ede9fb',
+      priceBg: '#2a2144',
+      priceBorder: '#8f6ad8',
+      priceText: '#ede9fb'
     };
   }
 
@@ -525,6 +523,24 @@ function exportPalette(theme){
     };
   }
 
+  if(theme === 'naturefantasy'){
+    return {
+      bg: '#f5f1e6',
+      tileBg: '#fffaf0',
+      tileBorder: '#c0b18f',
+      text: '#2f2a1f',
+      muted: '#635b42',
+      imgFallback: '#ece3ce',
+      badgeBg: '#ece3ce',
+      badgeBorder: '#5f6f3a',
+      badgeBorderAlt: '#ef4444',
+      badgeText: '#2f2a1f',
+      priceBg: '#ece3ce',
+      priceBorder: '#5f6f3a',
+      priceText: '#2f2a1f'
+    };
+  }
+
   if(theme === 'sunset'){
     return {
       bg: '#fff7ed',
@@ -543,93 +559,57 @@ function exportPalette(theme){
     };
   }
 
-  if(theme === 'cyberpunk'){
-    return {
-      bg: '#0f0218',
-      tileBg: '#1a0b2e',
-      tileBorder: '#6a4c93',
-      text: '#f0e6ff',
-      muted: '#b794f6',
-      imgFallback: '#2d1b4e',
-      badgeBg: '#2d1b4e',
-      badgeBorder: '#e100ff',
-      badgeBorderAlt: '#ef4444',
-      badgeText: '#f0e6ff',
-      priceBg: '#2d1b4e',
-      priceBorder: '#e100ff',
-      priceText: '#f0e6ff'
-    };
-  }
-
   if(theme === 'autumn'){
     return {
-      bg: '#fef3e2',
+      bg: '#fff7f7',
       tileBg: '#ffffff',
-      tileBorder: '#e6c9a8',
-      text: '#3e2723',
-      muted: '#795548',
-      imgFallback: '#fde7c8',
-      badgeBg: '#fde7c8',
-      badgeBorder: '#d84315',
+      tileBorder: '#ff8a8a',
+      text: '#4b0a0a',
+      muted: '#8a2b2b',
+      imgFallback: '#ffe0e0',
+      badgeBg: '#ffe0e0',
+      badgeBorder: '#dc2626',
       badgeBorderAlt: '#ef4444',
-      badgeText: '#3e2723',
-      priceBg: '#fde7c8',
-      priceBorder: '#d84315',
-      priceText: '#3e2723'
+      badgeText: '#4b0a0a',
+      priceBg: '#ffe0e0',
+      priceBorder: '#dc2626',
+      priceText: '#4b0a0a'
     };
   }
 
-  if(theme === 'midnight'){
+  if(theme === 'prored'){
     return {
-      bg: '#000510',
-      tileBg: '#0a1128',
-      tileBorder: '#1e3a5f',
-      text: '#d8e3f0',
-      muted: '#6b8caf',
-      imgFallback: '#0f1936',
-      badgeBg: '#0f1936',
-      badgeBorder: '#5e72e4',
+      bg: '#f6efef',
+      tileBg: '#fff8f8',
+      tileBorder: '#d8b0b0',
+      text: '#2c1b1b',
+      muted: '#6f4a4a',
+      imgFallback: '#f3e2e2',
+      badgeBg: '#f3e2e2',
+      badgeBorder: '#b03a3a',
       badgeBorderAlt: '#ef4444',
-      badgeText: '#d8e3f0',
-      priceBg: '#0f1936',
-      priceBorder: '#5e72e4',
-      priceText: '#d8e3f0'
-    };
-  }
-
-  if(theme === 'cherryblossom'){
-    return {
-      bg: '#fff5f7',
-      tileBg: '#ffffff',
-      tileBorder: '#ffc0cb',
-      text: '#4a1c29',
-      muted: '#8b5a6f',
-      imgFallback: '#ffe4e9',
-      badgeBg: '#ffe4e9',
-      badgeBorder: '#ff69b4',
-      badgeBorderAlt: '#ef4444',
-      badgeText: '#4a1c29',
-      priceBg: '#ffe4e9',
-      priceBorder: '#ff69b4',
-      priceText: '#4a1c29'
+      badgeText: '#2c1b1b',
+      priceBg: '#f3e2e2',
+      priceBorder: '#b03a3a',
+      priceText: '#2c1b1b'
     };
   }
 
   if(theme === 'emerald'){
     return {
-      bg: '#e8f5e9',
-      tileBg: '#ffffff',
-      tileBorder: '#81c784',
-      text: '#1b5e20',
-      muted: '#388e3c',
-      imgFallback: '#c8e6c9',
-      badgeBg: '#c8e6c9',
-      badgeBorder: '#2e7d32',
+      bg: '#0c1118',
+      tileBg: '#141c28',
+      tileBorder: '#2f425e',
+      text: '#e7eef8',
+      muted: '#9fb1c8',
+      imgFallback: '#1e2b40',
+      badgeBg: '#1e2b40',
+      badgeBorder: '#38bdf8',
       badgeBorderAlt: '#ef4444',
-      badgeText: '#1b5e20',
-      priceBg: '#c8e6c9',
-      priceBorder: '#2e7d32',
-      priceText: '#1b5e20'
+      badgeText: '#e7eef8',
+      priceBg: '#1e2b40',
+      priceBorder: '#38bdf8',
+      priceText: '#e7eef8'
     };
   }
 
@@ -661,6 +641,10 @@ function normalizeStateFromStorage(maybe){
   return result;
 }
 
+function normalizeAllowCopyText(value){
+  return value === true || value === 1;
+}
+
 function normalizeSettingsFromStorage(maybeSettings){
   const s = (maybeSettings && typeof maybeSettings === 'object') ? maybeSettings : {};
   const customTabs = (Array.isArray(s.customTabs) ? s.customTabs : [])
@@ -668,11 +652,11 @@ function normalizeSettingsFromStorage(maybeSettings){
     .map(t => ({ key: t.key, label: String(t.label).trim().slice(0, 30) || 'Custom' }));
   const lastSavedAt = Number(s.lastSavedAt);
   return {
-    theme: isKnownThemeValue(s.theme) ? s.theme : 'classic',
+    theme: normalizeThemeValue(s.theme),
     imageSource: (s.imageSource === 'cdn' || s.imageSource === 'info' || s.imageSource === 'auto')
       ? s.imageSource
       : 'cdn',
-    allowCopyText: !!s.allowCopyText,
+    allowCopyText: normalizeAllowCopyText(s.allowCopyText),
     customTabs,
     tabOrder: normalizeBuiltinKeyList(s.tabOrder),
     hiddenTabs: normalizeBuiltinKeyList(s.hiddenTabs),
@@ -756,6 +740,108 @@ function pickPreferredSettings(primary, secondary){
   return first;
 }
 
+function buildSettingsContentFingerprint(maybeSettings){
+  const s = normalizeSettingsFromStorage(maybeSettings);
+  return JSON.stringify({
+    theme: s.theme,
+    imageSource: s.imageSource,
+    allowCopyText: s.allowCopyText,
+    customTabs: s.customTabs,
+    tabOrder: s.tabOrder,
+    hiddenTabs: s.hiddenTabs
+  });
+}
+
+function syncSettingsRetryDelayMs(errorMessage){
+  const msg = String(errorMessage || '');
+  if(/MAX_WRITE_OPERATIONS_PER_HOUR/i.test(msg)) return 60 * 60 * 1000 + 1000;
+  if(/MAX_WRITE_OPERATIONS_PER_MINUTE/i.test(msg)) return 65 * 1000;
+  return 5000;
+}
+
+function queueSyncSettingsWrite(nextSettings, options){
+  const opts = (options && typeof options === 'object') ? options : {};
+  const normalized = normalizeSettingsFromStorage(nextSettings);
+  const nextJson = JSON.stringify(normalized);
+
+  if(!opts.force && nextJson === lastSyncedSettingsPayloadJson){
+    queuedSyncSettings = null;
+    return;
+  }
+
+  queuedSyncSettings = normalized;
+
+  if(opts.immediate){
+    if(syncSettingsDebounceTimer){
+      clearTimeout(syncSettingsDebounceTimer);
+      syncSettingsDebounceTimer = 0;
+    }
+    void flushSyncSettingsWrite();
+    return;
+  }
+
+  if(syncSettingsDebounceTimer) clearTimeout(syncSettingsDebounceTimer);
+  syncSettingsDebounceTimer = setTimeout(()=>{
+    syncSettingsDebounceTimer = 0;
+    void flushSyncSettingsWrite();
+  }, SYNC_SETTINGS_DEBOUNCE_MS);
+}
+
+async function flushSyncSettingsWrite(){
+  if(syncSettingsWriteInFlight) return;
+  if(!queuedSyncSettings) return;
+
+  const now = safeNow();
+  if(syncSettingsRetryAt > now){
+    const wait = Math.max(250, syncSettingsRetryAt - now);
+    if(syncSettingsRetryTimer) clearTimeout(syncSettingsRetryTimer);
+    syncSettingsRetryTimer = setTimeout(()=>{
+      syncSettingsRetryTimer = 0;
+      void flushSyncSettingsWrite();
+    }, wait);
+    return;
+  }
+
+  const payload = normalizeSettingsFromStorage(queuedSyncSettings);
+  const payloadJson = JSON.stringify(payload);
+  if(payloadJson === lastSyncedSettingsPayloadJson){
+    queuedSyncSettings = null;
+    return;
+  }
+
+  syncSettingsWriteInFlight = true;
+  const result = await storageSet('sync', SYNC_SETTINGS_KEY, payload);
+  syncSettingsWriteInFlight = false;
+
+  if(result.ok){
+    lastSyncedSettingsPayloadJson = payloadJson;
+    if(queuedSyncSettings && JSON.stringify(normalizeSettingsFromStorage(queuedSyncSettings)) === payloadJson){
+      queuedSyncSettings = null;
+    }
+    syncSettingsRetryAt = 0;
+    if(syncSettingsRetryTimer){
+      clearTimeout(syncSettingsRetryTimer);
+      syncSettingsRetryTimer = 0;
+    }
+    if(queuedSyncSettings) void flushSyncSettingsWrite();
+    return;
+  }
+
+  const delay = syncSettingsRetryDelayMs(result.error);
+  syncSettingsRetryAt = safeNow() + delay;
+  if(syncSettingsRetryTimer) clearTimeout(syncSettingsRetryTimer);
+  syncSettingsRetryTimer = setTimeout(()=>{
+    syncSettingsRetryTimer = 0;
+    void flushSyncSettingsWrite();
+  }, delay);
+  const msg = String(result.error || '');
+  if(/MAX_WRITE_OPERATIONS_PER_MINUTE|MAX_WRITE_OPERATIONS_PER_HOUR/i.test(msg)){
+    console.info('Sync settings write throttled; retry scheduled.');
+  }else{
+    console.warn('sync settings set deferred:', result.error);
+  }
+}
+
 function countItemsInState(s){
   if(!s) return 0;
   let count = BUILTIN_TABS.reduce((sum, tab)=> sum + (Number(s?.[tab.key]?.length) || 0), 0);
@@ -814,10 +900,11 @@ async function loadState(){
 
   state = mergePersistedListState(localState, legacySyncState, mergedSettingsBase, syncedSettingsOnly);
   const mergedSettings = state.settings;
+  lastSettingsContentFingerprint = buildSettingsContentFingerprint(mergedSettings);
+  lastSyncedSettingsPayloadJson = haveSyncedSettings ? JSON.stringify(syncedSettingsOnly) : '';
 
-  if(haveSyncedSettings && !areSettingsEqual(mergedSettings, syncedSettingsOnly)){
-    const repairedSync = await storageSet('sync', SYNC_SETTINGS_KEY, mergedSettings);
-    if(!repairedSync.ok) console.warn('sync settings repair failed:', repairedSync.error);
+  if(!haveSyncedSettings || !areSettingsEqual(mergedSettings, syncedSettingsOnly)){
+    queueSyncSettingsWrite(mergedSettings, { immediate: true, force: true });
   }
   const normalizedLocalState = normalizeStateFromStorage(localRes.value);
   if(JSON.stringify(state) !== JSON.stringify(normalizedLocalState)){
@@ -830,15 +917,22 @@ async function loadState(){
 }
 
 async function saveState(){
-  state.settings = normalizeSettingsFromStorage({ ...(state.settings || {}), lastSavedAt: safeNow() });
+  const normalizedSettings = normalizeSettingsFromStorage(state.settings || {});
+  const nextFingerprint = buildSettingsContentFingerprint(normalizedSettings);
+  const settingsChanged = nextFingerprint !== lastSettingsContentFingerprint;
+
+  if(settingsChanged){
+    state.settings = normalizeSettingsFromStorage({ ...normalizedSettings, lastSavedAt: safeNow() });
+    lastSettingsContentFingerprint = nextFingerprint;
+    queueSyncSettingsWrite(state.settings);
+  }else{
+    const keepLastSavedAt = Number(normalizedSettings.lastSavedAt) || 0;
+    state.settings = normalizeSettingsFromStorage({ ...normalizedSettings, lastSavedAt: keepLastSavedAt });
+  }
 
   // Always persist locally (higher quotas; reliable across extension reload).
   const local = await storageSet('local', LOCAL_KEY, state);
   if(!local.ok) console.warn('local set failed:', local.error);
-
-  // Sync only lightweight settings (theme/image source). Lists stay local to avoid sync quota errors.
-  const syncSettings = await storageSet('sync', SYNC_SETTINGS_KEY, state.settings || {});
-  if(!syncSettings.ok) console.warn('sync settings set failed:', syncSettings.error);
 }
 
 async function saveLocalStateSnapshot(){
@@ -1856,7 +1950,7 @@ function renderGrid(section, root){
     root.appendChild(hint);
   }
   
-  const allowCopyText = state?.settings?.allowCopyText === true;
+  const allowCopyText = normalizeAllowCopyText(state?.settings?.allowCopyText);
   for(const item of items){
     const tile = el('div','tile');
     tile.draggable = !allowCopyText;
@@ -2510,7 +2604,7 @@ function buildDataBackupPayload(sourceState){
     settings: {
       theme: settings.theme,
       imageSource: settings.imageSource,
-      allowCopyText: !!settings.allowCopyText,
+      allowCopyText: normalizeAllowCopyText(settings.allowCopyText),
       customTabs: cloneJsonValue(settings.customTabs, []),
       tabOrder: cloneJsonValue(settings.tabOrder, []),
       hiddenTabs: cloneJsonValue(settings.hiddenTabs, [])
@@ -2640,7 +2734,7 @@ function refreshSettingsUiFromState(){
   if(imageSourceSelect) imageSourceSelect.value = imageSourceFromState();
 
   const allowCopyTextCheckbox = $('#suite-allow-copy-text');
-  if(allowCopyTextCheckbox) allowCopyTextCheckbox.checked = !!state?.settings?.allowCopyText;
+  if(allowCopyTextCheckbox) allowCopyTextCheckbox.checked = normalizeAllowCopyText(state?.settings?.allowCopyText);
 }
 
 async function applyImportedBackupState(importedState){
@@ -4221,7 +4315,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
     themeSelect.addEventListener('change', async()=>{
       const t = themeSelect.value;
       state.settings = state.settings || {};
-      state.settings.theme = isKnownThemeValue(t) ? t : 'classic';
+      state.settings.theme = normalizeThemeValue(t);
       applyTheme(themeFromState());
       await saveState();
     });
@@ -4341,6 +4435,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
     this.value = '';
     if(!val) return;
     const sep = val.indexOf('::');
+    if(sep < 0) return;
     const action = val.slice(0, sep);
     const key = val.slice(sep + 2);
     if(action === 'hide') await hideBuiltinTab(key);
@@ -4446,6 +4541,8 @@ document.addEventListener('DOMContentLoaded', async()=>{
       const prevTabOrderJson = JSON.stringify(state.settings.tabOrder || []);
       const prevHiddenJson = JSON.stringify(state.settings.hiddenTabs || []);
       state.settings = nextSettings;
+      lastSettingsContentFingerprint = buildSettingsContentFingerprint(nextSettings);
+      lastSyncedSettingsPayloadJson = JSON.stringify(incomingSettings);
       for(const tab of nextSettings.customTabs){
         if(tab?.key && !Array.isArray(state[tab.key])) state[tab.key] = [];
       }
@@ -4455,9 +4552,7 @@ document.addEventListener('DOMContentLoaded', async()=>{
 
       void saveLocalStateSnapshot();
       if(!acceptedIncoming){
-        void storageSet('sync', SYNC_SETTINGS_KEY, nextSettings).then((res)=>{
-          if(!res.ok) console.warn('sync settings reconcile failed:', res.error);
-        });
+        queueSyncSettingsWrite(nextSettings, { immediate: true, force: true });
       }
     }
 

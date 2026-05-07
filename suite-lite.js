@@ -15,21 +15,27 @@
   }
 
   function normalizeTheme(value) {
+    const legacyThemeMap = {
+      arcane: 'naturefantasy',
+      cyberpunk: 'dark',
+      midnight: 'dark',
+      cherryblossom: 'prored'
+    };
+    const normalized = typeof value === 'string' ? value.toLowerCase() : '';
+    const migrated = legacyThemeMap[normalized] || normalized;
     const known = [
       'classic',
       'dark',
       'valentine',
       'ocean',
       'forest',
+      'naturefantasy',
       'sunset',
-      'arcane',
-      'cyberpunk',
       'autumn',
-      'midnight',
-      'cherryblossom',
+      'prored',
       'emerald'
     ];
-    return known.includes(value) ? value : 'classic';
+    return known.includes(migrated) ? migrated : 'classic';
   }
 
   function normalizeImageSource(value) {
@@ -38,6 +44,10 @@
 
   function normalizeSurface(value) {
     return value === 'popup' ? 'popup' : 'sidepanel';
+  }
+
+  function normalizeAllowCopyText(value) {
+    return value === true || value === 1;
   }
 
   function safeNow() {
@@ -137,15 +147,40 @@
 
   async function updateSyncSettings(patch) {
     const current = await readSyncSettings();
+    const nextTheme = Object.prototype.hasOwnProperty.call(patch || {}, 'theme')
+      ? normalizeTheme(patch.theme)
+      : current.theme;
+    const nextImageSource = Object.prototype.hasOwnProperty.call(patch || {}, 'imageSource')
+      ? normalizeImageSource(patch.imageSource)
+      : current.imageSource;
+    const nextAllowCopyText = Object.prototype.hasOwnProperty.call(patch || {}, 'allowCopyText')
+      ? normalizeAllowCopyText(patch.allowCopyText)
+      : current.allowCopyText;
+
+    const changed = nextTheme !== current.theme
+      || nextImageSource !== current.imageSource
+      || nextAllowCopyText !== current.allowCopyText;
+
+    if (!changed) {
+      return current;
+    }
+
     const nextSavedAt = safeNow();
     const next = {
       ...current,
-      ...patch,
+      theme: nextTheme,
+      imageSource: nextImageSource,
+      allowCopyText: nextAllowCopyText,
       lastSavedAt: nextSavedAt
     };
     const result = await storageSet('sync', SYNC_SETTINGS_KEY, next);
     if (!result.ok) {
-      console.warn('Could not save sync settings:', result.error);
+      const msg = String(result.error || '');
+      if (/MAX_WRITE_OPERATIONS_PER_MINUTE|MAX_WRITE_OPERATIONS_PER_HOUR/i.test(msg)) {
+        console.info('Sync settings write throttled; change will be retried later.');
+      } else {
+        console.warn('Could not save sync settings:', result.error);
+      }
     }
     await updateLocalSettingsMirror(patch, nextSavedAt);
     return next;
@@ -209,6 +244,66 @@
     });
   }
 
+  async function openSidePanelFromGesture() {
+    if (!chrome?.sidePanel?.open) {
+      return { ok: false, error: 'Side panel API is unavailable in this Chrome version.' };
+    }
+
+    try {
+      const currentWindowId = chrome?.windows?.WINDOW_ID_CURRENT;
+      if (typeof currentWindowId === 'number') {
+        await chrome.sidePanel.open({ windowId: currentWindowId });
+        return { ok: true };
+      }
+    } catch (e) {
+      // Fall through to a slower fallback that resolves a numeric window id.
+      void e;
+    }
+
+    const windowId = await getCurrentWindowId();
+    if (typeof windowId !== 'number') {
+      return { ok: false, error: 'Could not determine current window id.' };
+    }
+
+    try {
+      await chrome.sidePanel.open({ windowId });
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: String(e?.message || e) };
+    }
+  }
+
+  async function openPopupFromGesture() {
+    if (!chrome?.action?.openPopup) {
+      return { ok: false, error: 'Action popup API is unavailable in this Chrome version.' };
+    }
+
+    let previousPopup = '';
+    try {
+      if (chrome.action?.getPopup) {
+        previousPopup = await chrome.action.getPopup({}) || '';
+      }
+    } catch {}
+
+    try {
+      if (chrome.action?.setPopup) {
+        await chrome.action.setPopup({ popup: 'popup.html' });
+      }
+      await chrome.action.openPopup();
+      if (chrome.action?.setPopup) {
+        await chrome.action.setPopup({ popup: previousPopup || '' });
+      }
+      return { ok: true };
+    } catch (e) {
+      if (chrome.action?.setPopup) {
+        try {
+          await chrome.action.setPopup({ popup: previousPopup || '' });
+        } catch {}
+      }
+      return { ok: false, error: String(e?.message || e) };
+    }
+  }
+
   let settingsInitialized = false;
 
   async function initializeSettingsUI() {
@@ -230,7 +325,7 @@
 
     themeSelect.value = normalizeTheme(settings.theme);
     imageSourceSelect.value = normalizeImageSource(settings.imageSource);
-    allowCopyTextCheckbox.checked = !!settings.allowCopyText;
+    allowCopyTextCheckbox.checked = normalizeAllowCopyText(settings.allowCopyText);
     surfaceSelect.value = normalizeSurface(prefs.defaultSurface);
 
     applyThemeToBody(themeSelect.value);
@@ -260,12 +355,24 @@
     });
 
     btnOpenSidePanel?.addEventListener('click', async () => {
+      const direct = await openSidePanelFromGesture();
+      if (direct.ok) return;
+
       const windowId = await getCurrentWindowId();
-      await sendRuntimeMessage({ type: 'YB_OPEN_SURFACE', surface: 'sidepanel', windowId });
+      const fallback = await sendRuntimeMessage({ type: 'YB_OPEN_SURFACE', surface: 'sidepanel', windowId });
+      if (!fallback?.ok) {
+        console.warn('Could not open side panel:', fallback?.error || direct.error || 'Unknown error');
+      }
     });
 
     btnOpenPopup?.addEventListener('click', async () => {
-      await sendRuntimeMessage({ type: 'YB_OPEN_SURFACE', surface: 'popup' });
+      const direct = await openPopupFromGesture();
+      if (direct.ok) return;
+
+      const fallback = await sendRuntimeMessage({ type: 'YB_OPEN_SURFACE', surface: 'popup' });
+      if (!fallback?.ok) {
+        console.warn('Could not open popup:', fallback?.error || direct.error || 'Unknown error');
+      }
     });
   }
 

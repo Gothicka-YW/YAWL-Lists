@@ -231,17 +231,22 @@
 
   function isKnownThemeValue(val){
     return val === 'classic' || val === 'dark' || val === 'valentine' 
-      || val === 'ocean' || val === 'forest' || val === 'sunset' 
-      || val === 'arcane' || val === 'cyberpunk' || val === 'autumn' 
-      || val === 'midnight' || val === 'cherryblossom' || val === 'emerald';
+      || val === 'ocean' || val === 'forest' || val === 'naturefantasy' 
+      || val === 'sunset' || val === 'autumn' || val === 'prored' 
+      || val === 'emerald';
+  }
+
+  function normalizeThemeValue(theme){
+    const val = (typeof theme === 'string') ? theme.toLowerCase() : '';
+    if(val === 'arcane') return 'naturefantasy';
+    if(val === 'cyberpunk' || val === 'midnight') return 'dark';
+    if(val === 'cherryblossom') return 'prored';
+    return isKnownThemeValue(val) ? val : 'classic';
   }
 
   function exportPalette(theme){
     if(theme === 'dark'){
-      return { priceBg: '#1f2a44', priceBorder: '#14b8a6', priceText: '#e5e7eb' };
-    }
-    if(theme === 'arcane'){
-      return { priceBg: '#221842', priceBorder: '#d4af37', priceText: '#f3f0ff' };
+      return { priceBg: '#2a2144', priceBorder: '#8f6ad8', priceText: '#ede9fb' };
     }
     if(theme === 'valentine'){
       return { priceBg: '#ffe4e6', priceBorder: '#e11d48', priceText: '#1f2937' };
@@ -252,23 +257,20 @@
     if(theme === 'forest'){
       return { priceBg: '#dcfce7', priceBorder: '#16a34a', priceText: '#052e16' };
     }
+    if(theme === 'naturefantasy'){
+      return { priceBg: '#ece3ce', priceBorder: '#5f6f3a', priceText: '#2f2a1f' };
+    }
     if(theme === 'sunset'){
       return { priceBg: '#ffedd5', priceBorder: '#f97316', priceText: '#1f2937' };
     }
-    if(theme === 'cyberpunk'){
-      return { priceBg: '#2d1b4e', priceBorder: '#e100ff', priceText: '#f0e6ff' };
-    }
     if(theme === 'autumn'){
-      return { priceBg: '#fde7c8', priceBorder: '#d84315', priceText: '#3e2723' };
+      return { priceBg: '#ffe0e0', priceBorder: '#dc2626', priceText: '#4b0a0a' };
     }
-    if(theme === 'midnight'){
-      return { priceBg: '#0f1936', priceBorder: '#5e72e4', priceText: '#d8e3f0' };
-    }
-    if(theme === 'cherryblossom'){
-      return { priceBg: '#ffe4e9', priceBorder: '#ff69b4', priceText: '#4a1c29' };
+    if(theme === 'prored'){
+      return { priceBg: '#f3e2e2', priceBorder: '#b03a3a', priceText: '#2c1b1b' };
     }
     if(theme === 'emerald'){
-      return { priceBg: '#c8e6c9', priceBorder: '#2e7d32', priceText: '#1b5e20' };
+      return { priceBg: '#1e2b40', priceBorder: '#38bdf8', priceText: '#e7eef8' };
     }
     // classic
     return { priceBg: '#f3f4f6', priceBorder: '#111827', priceText: '#111827' };
@@ -658,7 +660,7 @@
     // Get current theme from storage
     const listsState = await loadSuiteListsState();
     const theme = listsState?.settings?.theme;
-    const currentTheme = isKnownThemeValue(theme) ? theme : 'classic';
+    const currentTheme = normalizeThemeValue(theme);
     const pal = exportPalette(currentTheme);
 
     // Background (light gray like list templates)

@@ -82,6 +82,11 @@ function getCurrentWindowId() {
   });
 }
 
+function isGestureRestrictedOpenError(errorLike) {
+  const message = String(errorLike?.message || errorLike || '');
+  return /user gesture|may only be called in response to a user gesture|failed to open popup/i.test(message);
+}
+
 async function openExtensionPopup(options) {
   const opts = (options && typeof options === 'object') ? options : {};
   const restoreAfterOpen = !!opts.restoreAfterOpen;
@@ -108,7 +113,9 @@ async function openExtensionPopup(options) {
 
     return true;
   } catch (e) {
-    console.error('Failed to open extension popup:', e);
+    if (!isGestureRestrictedOpenError(e)) {
+      console.error('Failed to open extension popup:', e);
+    }
 
     if (restoreAfterOpen && chrome.action?.setPopup) {
       try {
@@ -127,7 +134,11 @@ async function openSidePanel(windowId) {
     await chrome.sidePanel.open({ windowId: winId });
     return true;
   } catch (e) {
-    console.error('Failed to open side panel:', e);
+    const message = String(e?.message || e || '');
+    const isGestureError = /user gesture|may only be called in response to a user gesture/i.test(message);
+    if (!isGestureError) {
+      console.error('Failed to open side panel:', e);
+    }
     return false;
   }
 }
@@ -144,7 +155,10 @@ chrome.action.onClicked.addListener((tab) => {
   void (async () => {
     const prefs = await loadUiPrefs();
     if (prefs.defaultSurface === 'popup') {
-      await openExtensionPopup({ restoreAfterOpen: false });
+      const opened = await openExtensionPopup({ restoreAfterOpen: false });
+      if (!opened) {
+        await openSidePanel(tab?.windowId);
+      }
       return;
     }
 
@@ -172,11 +186,21 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 
     if (msg?.type === 'YB_OPEN_SURFACE') {
       const surface = normalizeSurface(msg?.surface);
-      const prefs = await loadUiPrefs();
-      const ok = surface === 'popup'
-        ? await openExtensionPopup({ restoreAfterOpen: prefs.defaultSurface !== 'popup' })
-        : await openSidePanel(msg?.windowId);
-      sendResponse({ ok });
+      if (surface === 'popup') {
+        const prefs = await loadUiPrefs();
+        const ok = await openExtensionPopup({ restoreAfterOpen: prefs.defaultSurface !== 'popup' });
+        sendResponse({
+          ok,
+          error: ok ? '' : 'Popup open requires a direct user click in this browser context.'
+        });
+        return;
+      }
+
+      const ok = await openSidePanel(msg?.windowId);
+      sendResponse({
+        ok,
+        error: ok ? '' : 'Side panel open requires a direct user gesture in the extension page.'
+      });
       return;
     }
 
