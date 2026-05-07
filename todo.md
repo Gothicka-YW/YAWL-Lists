@@ -145,6 +145,30 @@ Reshape WTB & WTS Lists around the requested tab model, make list/export/backup 
 - [ ] Gate premium features through server-validated entitlements.
 - [ ] Add account recovery/update handling for lifetime purchasers.
 
+## Phase 8: privacy and legal readiness
+
+- [ ] Publish `PRIVACY_POLICY.md` and link it in Chrome Web Store listing and extension Settings/About.
+- [ ] Publish `TERMS_OF_USE.md` (or EULA) and define acceptable-use and anti-abuse terms.
+- [ ] Publish a refund/cancellation policy for paid access.
+- [ ] Add a clear non-affiliation disclaimer in listing and in-app About text.
+- [ ] Add support and legal contact email in policy/legal documents.
+- [ ] Get final policy/legal text reviewed for your region before paid launch.
+
+### Privacy policy language (draft)
+
+- `WTB & WTS stores list content and settings in Chrome local/sync storage to provide core features.`
+- `WTB & WTS may call third-party item/image APIs required to search and render item data.`
+- `WTB & WTS does not sell personal information.`
+- `If paid licensing is enabled, minimal account or transaction identifiers may be processed to validate entitlements and prevent abuse.`
+- `Users can export, import, and delete extension data from the Settings module.`
+
+### Legal language (draft)
+
+- `WTB & WTS is a fan-made tool and is not affiliated with Big Viking Games, YoWorld, or YoTopia.`
+- `Access may be suspended or revoked for license abuse, chargebacks, fraud, or terms violations.`
+- `The extension is provided "as is" without warranties, to the fullest extent permitted by law.`
+- `To the extent permitted by law, liability is limited to fees paid for the service in the prior 12 months.`
+
 ## Recommended execution order
 
 - [x] 1. Finalize the tab mapping and migration rules.
