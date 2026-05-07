@@ -2,9 +2,12 @@ const SYNC_KEY = 'yo_boards_sync_v1';
 const LOCAL_KEY = 'yo_boards_local_v1';
 const SYNC_SETTINGS_KEY = 'yo_boards_sync_settings_v1';
 const LIST_DENSITY_SESSION_KEY = 'yo_boards_list_density_v1';
+const LISTS_QUICKSTART_DISMISSED_KEY = 'yo_boards_lists_quickstart_dismissed_v1';
+const BACKUP_KIND = 'wtb_wts_backup';
+const LEGACY_BACKUP_KIND = 'yo_boards_backup';
 
-const listConfigApi = globalThis.YoBoardsListConfig;
-if(!listConfigApi) throw new Error('YoBoardsListConfig is not loaded.');
+const listConfigApi = globalThis.WtbWtsListConfig;
+if(!listConfigApi) throw new Error('WtbWtsListConfig is not loaded.');
 
 const {
   BUILTIN_TABS,
@@ -161,6 +164,33 @@ function saveTabDrafts(drafts){
   try{ localStorage.setItem(TAB_DRAFTS_KEY, JSON.stringify(drafts || {})); }catch{}
 }
 
+function isListsQuickstartDismissed(){
+  try{ return localStorage.getItem(LISTS_QUICKSTART_DISMISSED_KEY) === '1'; }catch{}
+  return false;
+}
+
+function setListsQuickstartDismissed(isDismissed){
+  try{
+    if(isDismissed) localStorage.setItem(LISTS_QUICKSTART_DISMISSED_KEY, '1');
+    else localStorage.removeItem(LISTS_QUICKSTART_DISMISSED_KEY);
+  }catch{}
+}
+
+function initListsQuickstartCue(){
+  const cueCard = $('#lists-quickstart');
+  if(!cueCard) return;
+
+  cueCard.hidden = isListsQuickstartDismissed();
+
+  const dismissBtn = $('#btn-lists-quickstart-dismiss');
+  if(!dismissBtn || dismissBtn.dataset.wired === '1') return;
+  dismissBtn.dataset.wired = '1';
+  dismissBtn.addEventListener('click', ()=>{
+    setListsQuickstartDismissed(true);
+    cueCard.hidden = true;
+  });
+}
+
 function isListTab(tabName){
   if(BUILTIN_TABS.some(t => t.key === tabName)) return true;
   return getCustomTabs().some(t => t.key === tabName);
@@ -220,7 +250,7 @@ function flashDropZoneMessage(message, kind){
   const zone = $('#drop-zone');
   if(!zone) return;
 
-  const baseMessage = zone.dataset.baseMessage || zone.textContent.trim() || 'Drop a YoWorld.info item link here to add it';
+  const baseMessage = zone.dataset.baseMessage || zone.textContent.trim() || 'Drop an item link here to add it';
   zone.dataset.baseMessage = baseMessage;
   zone.textContent = String(message || baseMessage);
   zone.classList.toggle('is-success', kind === 'success');
@@ -820,7 +850,7 @@ function buildYwCdnImageUrlFromId(itemId){
   const id = Number(itemId);
   if(!Number.isFinite(id) || id <= 0) return '';
 
-  // YoWorld CDN pathing uses the first 4 digits of the item id (zero-padded)
+  // Provider CDN pathing uses the first 4 digits of the item id (zero-padded)
   // as folder segments, e.g. 26295 -> /26/29/26295/26295.png
   // This matches how yoworld.info constructs CDN URLs.
   const s = String(Math.trunc(id)).padStart(4, '0');
@@ -843,12 +873,12 @@ function buildYwCdnImageUrlFromIdWithExt(itemId, ext){
 function buildYwApiItemImageUrlFromId(itemId, size){
   const id = Number(itemId);
   if(!Number.isFinite(id) || id <= 0) return '';
-  // The YoWorld.info API supports a limited set of sizes; 130_100 is reliable.
+  // The provider image API supports a limited set of sizes; 130_100 is reliable.
   const sz = (typeof size === 'string' && /^\d+_\d+$/.test(size.trim())) ? size.trim() : '130_100';
   return `https://api.yoworld.info/api/items/${id}/image/${sz}`;
 }
 
-function unwrapYoWorldInfoProxyInnerUrl(proxyUrl){
+function unwrapProviderInfoProxyInnerUrl(proxyUrl){
   const u = (typeof proxyUrl === 'string') ? proxyUrl.trim() : '';
   if(!u) return '';
   const m = u.match(/api\.yoworld\.info\/extension\.php\?[\s\S]*?\bx=([^&\s#]+)/i);
@@ -856,12 +886,12 @@ function unwrapYoWorldInfoProxyInnerUrl(proxyUrl){
   try{ return decodeURIComponent(m[1]); }catch{ return ''; }
 }
 
-function isYoWorldInfoProxyToPng(proxyUrl){
-  const inner = unwrapYoWorldInfoProxyInnerUrl(proxyUrl);
+function isProviderInfoProxyToPng(proxyUrl){
+  const inner = unwrapProviderInfoProxyInnerUrl(proxyUrl);
   return !!inner && /\.png(\?|#|$)/i.test(inner);
 }
 
-function yoworldInfoProxyUrlForImageUrl(imageUrl){
+function providerInfoProxyUrlForImageUrl(imageUrl){
   const u = (typeof imageUrl === 'string') ? imageUrl.trim() : '';
   if(!u) return '';
   if(/^https?:\/\/api\.yoworld\.info\/extension\.php\?x=/i.test(u)) return u;
@@ -903,7 +933,7 @@ function deepFindImageUrl(obj){
   return '';
 }
 
-function extractYoWorldInfoImageUrl(detail, itemId){
+function extractProviderInfoImageUrl(detail, itemId){
   const candidates = [
     detail?.image_url,
     detail?.imageUrl,
@@ -931,7 +961,7 @@ function extractYoWorldInfoImageUrl(detail, itemId){
   if(deep) return deep;
 
   // Fallback: if not provided, leave empty.
-  // (We still have the YoWorld CDN derived URL.)
+  // (We still have the provider CDN-derived URL.)
   void itemId;
   return '';
 }
@@ -944,11 +974,11 @@ function bestImageUrlForItem(item){
   const cdn = s(item.ywCdnImageUrl) || buildYwCdnImageUrlFromId(item.id);
   const api = buildYwApiItemImageUrlFromId(item.id, '130_100');
   const storedInfo = s(item.ywInfoImageUrl);
-  const info = storedInfo || api || yoworldInfoProxyUrlForImageUrl(cdn || direct);
+  const info = storedInfo || api || providerInfoProxyUrlForImageUrl(cdn || direct);
 
   if(source === 'info'){
     // Avoid getting stuck on the extension.php proxy-to-missing-png placeholder (it can load as a black image).
-    if(storedInfo && !isYoWorldInfoProxyToPng(storedInfo)) return storedInfo;
+    if(storedInfo && !isProviderInfoProxyToPng(storedInfo)) return storedInfo;
     return api || storedInfo || direct || cdn;
   }
   if(source === 'auto') return direct || cdn || api || info;
@@ -960,9 +990,9 @@ async function ensureInfoImageUrl(entry, currentUrl){
 
   const cur = (typeof currentUrl === 'string') ? currentUrl.trim() : '';
   const existingInfo = (typeof entry.ywInfoImageUrl === 'string') ? entry.ywInfoImageUrl.trim() : '';
-  if(existingInfo && existingInfo !== cur && !isYoWorldInfoProxyToPng(existingInfo)) return existingInfo;
+  if(existingInfo && existingInfo !== cur && !isProviderInfoProxyToPng(existingInfo)) return existingInfo;
 
-  // Primary strategy: use YoWorld.info's image proxy for the derived CDN URL.
+  // Primary strategy: use the provider image proxy for the derived CDN URL.
   // This endpoint often returns a valid PNG even when the direct CDN URL 404s.
 
   const cdnPng = (typeof entry.ywCdnImageUrl === 'string' && entry.ywCdnImageUrl.trim())
@@ -972,14 +1002,14 @@ async function ensureInfoImageUrl(entry, currentUrl){
   if(cdnPng && !entry.ywCdnImageUrl) entry.ywCdnImageUrl = cdnPng;
 
   const cdnJpg = buildYwCdnImageUrlFromIdWithExt(entry.id, 'jpg');
-  const proxyPng = yoworldInfoProxyUrlForImageUrl(cdnPng || entry.imageUrl);
-  const proxyJpg = yoworldInfoProxyUrlForImageUrl(cdnJpg);
+  const proxyPng = providerInfoProxyUrlForImageUrl(cdnPng || entry.imageUrl);
+  const proxyJpg = providerInfoProxyUrlForImageUrl(cdnJpg);
   const apiImg = buildYwApiItemImageUrlFromId(entry.id, '130_100');
 
   // Prefer real assets (CDN .jpg) and the reliable API image endpoint before the extension proxy.
   // The proxy can return a "valid" image even when the underlying CDN URL is missing (black placeholder).
   const candidates = [];
-  if(existingInfo && !isYoWorldInfoProxyToPng(existingInfo)) candidates.push(existingInfo);
+  if(existingInfo && !isProviderInfoProxyToPng(existingInfo)) candidates.push(existingInfo);
   candidates.push(
     cdnJpg,
     apiImg,
@@ -999,7 +1029,7 @@ async function ensureInfoImageUrl(entry, currentUrl){
 
   try{
     const detail = await apiItemDetail(entry.id);
-    const u = extractYoWorldInfoImageUrl(detail, entry.id);
+    const u = extractProviderInfoImageUrl(detail, entry.id);
     if(u){
       entry.ywInfoImageUrl = u;
       return u;
@@ -1331,8 +1361,8 @@ function renderSearchResultRow(it, resultsRoot){
     thumb.dataset.fallbackStage = String(stage + 1);
     const current = String(thumb.currentSrc || thumb.src || '').trim();
     const cdnJpg = buildYwCdnImageUrlFromIdWithExt(it.id, 'jpg');
-    const proxyJpg = yoworldInfoProxyUrlForImageUrl(cdnJpg);
-    const proxyPng = yoworldInfoProxyUrlForImageUrl(buildYwCdnImageUrlFromId(it.id));
+    const proxyJpg = providerInfoProxyUrlForImageUrl(cdnJpg);
+    const proxyPng = providerInfoProxyUrlForImageUrl(buildYwCdnImageUrlFromId(it.id));
     const next = stage === 0 ? cdnJpg : (stage === 1 ? proxyJpg : proxyPng);
     if(next && next !== current) thumb.src = next;
   });
@@ -1493,7 +1523,7 @@ function extractItemIdFromUrl(url){
   const u = String(url || '').trim();
   if(!u) return 0;
 
-  // Unwrap YoWorld.info image proxy URLs (these often wrap the CDN URL in x=...)
+  // Unwrap provider image proxy URLs (these often wrap the CDN URL in x=...)
   // Example: https://api.yoworld.info/extension.php?x=<encoded-cdn-url>
   try{
     const proxyMatch = u.match(/api\.yoworld\.info\/extension\.php\?[^\s#]*\bx=([^&\s#]+)/i);
@@ -1620,8 +1650,8 @@ function wireSidePanelDrop(){
     }catch{}
 
     if(!url){
-      alert('Drop a YoWorld.info item link (URL).');
-      flashDropZoneMessage('Drop a YoWorld.info item link (URL).', 'error');
+      alert('Drop an item link (URL).');
+      flashDropZoneMessage('Drop an item link (URL).', 'error');
       return;
     }
 
@@ -1890,7 +1920,7 @@ function renderGrid(section, root){
     img.loading = 'lazy';
     img.referrerPolicy = 'no-referrer';
     img.addEventListener('error', async()=>{
-      // Some items use .jpg on the YoWorld CDN (not .png). Also, the info proxy can fail.
+      // Some items use .jpg on the CDN (not .png). Also, the proxy can fail.
       // Allow a few sequential fallbacks instead of giving up after the first.
       const stage = Number(img.dataset.fallbackStage || '0');
       if(stage >= 4) return;
@@ -2088,8 +2118,8 @@ async function doSearch(){
         thumb.dataset.fallbackStage = String(stage + 1);
         const current = String(thumb.currentSrc || thumb.src || '').trim();
         const cdnJpg = buildYwCdnImageUrlFromIdWithExt(id, 'jpg');
-        const proxyJpg = yoworldInfoProxyUrlForImageUrl(cdnJpg);
-        const proxyPng = yoworldInfoProxyUrlForImageUrl(buildYwCdnImageUrlFromId(id));
+        const proxyJpg = providerInfoProxyUrlForImageUrl(cdnJpg);
+        const proxyPng = providerInfoProxyUrlForImageUrl(buildYwCdnImageUrlFromId(id));
         const next = stage === 0 ? cdnJpg : (stage === 1 ? proxyJpg : proxyPng);
         if(next && next !== current) thumb.src = next;
       });
@@ -2270,7 +2300,7 @@ async function loadImageWithFallback(primaryUrl, itemId){
     attempts.push(primaryUrl.replace(/\.jpe?g$/i, '.png'));
   }
   
-  // Add YoWorld Info API as fallback if we have an itemId
+  // Add provider image API as fallback if we have an itemId
   if(itemId){
     attempts.push(`https://api.yoworld.info/api/items/${itemId}/image/130_100`);
   }
@@ -2473,7 +2503,7 @@ function buildDataBackupPayload(sourceState){
   try{ appVersion = String(chrome?.runtime?.getManifest?.()?.version || ''); }catch{}
 
   return {
-    kind: 'yo_boards_backup',
+    kind: BACKUP_KIND,
     schemaVersion: 1,
     exportedAt: new Date().toISOString(),
     appVersion,
@@ -2494,7 +2524,7 @@ async function exportDataBackupFile(){
   const json = JSON.stringify(payload, null, 2);
   const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
   const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  await downloadBlob(blob, `yoboards-data-backup-${stamp}.json`);
+  await downloadBlob(blob, `wtb-wts-data-backup-${stamp}.json`);
 
   const customCount = Array.isArray(payload?.settings?.customTabs) ? payload.settings.customTabs.length : 0;
   alert(`Backup exported. Included ${customCount} custom tab${customCount === 1 ? '' : 's'}.`);
@@ -2548,8 +2578,9 @@ function parseDataBackupPayloadText(text){
     throw new Error('Invalid JSON file.');
   }
 
-  if(String(parsed.kind || '') !== 'yo_boards_backup'){
-    throw new Error('This is not a YoBoards backup file.');
+  const kind = String(parsed.kind || '').trim();
+  if(kind !== BACKUP_KIND && kind !== LEGACY_BACKUP_KIND){
+    throw new Error('This is not a WTB & WTS backup file.');
   }
 
   const schemaVersion = Number(parsed.schemaVersion);
@@ -2677,7 +2708,7 @@ async function copyTextToClipboard(text){
   return false;
 }
 
-function yoworldInfoItemPageUrl(itemId){
+function providerItemPageUrl(itemId){
   const id = Number(itemId);
   if(!Number.isFinite(id) || id <= 0) return '';
   // Best guess; even if this path differs, we still show the API-based info.
@@ -2706,7 +2737,7 @@ async function priceCheckShowDetail(itemId){
   const cdnImageUrl = buildYwCdnImageUrlFromId(id);
   const infoImageUrl = buildYwApiItemImageUrlFromId(id, '130_100');
   const imgUrl = bestImageUrlForItem({ id, imageUrl: '', ywCdnImageUrl: cdnImageUrl, ywInfoImageUrl: infoImageUrl });
-  const link = yoworldInfoItemPageUrl(id);
+  const link = providerItemPageUrl(id);
 
   // Load any saved notes/tags for this item.
   let noteState = { note: '', tags: [], updatedAt: 0 };
@@ -2747,8 +2778,8 @@ async function priceCheckShowDetail(itemId){
 
     const current = String(img.currentSrc || img.src || '').trim();
     const cdnJpg = buildYwCdnImageUrlFromIdWithExt(id, 'jpg');
-    const proxyJpg = yoworldInfoProxyUrlForImageUrl(cdnJpg);
-    const proxyPng = yoworldInfoProxyUrlForImageUrl(buildYwCdnImageUrlFromId(id));
+    const proxyJpg = providerInfoProxyUrlForImageUrl(cdnJpg);
+    const proxyPng = providerInfoProxyUrlForImageUrl(buildYwCdnImageUrlFromId(id));
 
     const next = stage === 0 ? cdnJpg : (stage === 1 ? proxyJpg : (stage === 2 ? proxyPng : ''));
     if(next && next !== current){
@@ -2778,7 +2809,7 @@ async function priceCheckShowDetail(itemId){
     a.href = link;
     a.target = '_blank';
     a.rel = 'noreferrer';
-    a.textContent = 'Open on YoWorld.info';
+    a.textContent = 'Open item page';
     a.style.display = 'inline-block';
     a.style.marginTop = '4px';
     meta.appendChild(a);
@@ -3048,15 +3079,15 @@ async function priceCheckSearch(){
         if(stage === 3){
           try{
             const detail = await apiItemDetail(it.id);
-            const u = extractYoWorldInfoImageUrl(detail, it.id);
+            const u = extractProviderInfoImageUrl(detail, it.id);
             if(u && u !== current) thumb.src = u;
           }catch{}
           return;
         }
 
         const cdnJpg = buildYwCdnImageUrlFromIdWithExt(it.id, 'jpg');
-        const proxyJpg = yoworldInfoProxyUrlForImageUrl(cdnJpg);
-        const proxyPng = yoworldInfoProxyUrlForImageUrl(buildYwCdnImageUrlFromId(it.id));
+        const proxyJpg = providerInfoProxyUrlForImageUrl(cdnJpg);
+        const proxyPng = providerInfoProxyUrlForImageUrl(buildYwCdnImageUrlFromId(it.id));
         const next = stage === 0 ? cdnJpg : (stage === 1 ? proxyJpg : proxyPng);
         if(next && next !== current) thumb.src = next;
       });
@@ -3535,7 +3566,7 @@ async function exportPng(scope, options){
 
     const suffix = totalPages > 1 ? `-p${pageIndex+1}` : '';
     const styleSuffix = includeStoreTags ? '-tags' : '-plain';
-    const filename = `yoboards-${sectionKey}${styleSuffix}${suffix}.png`;
+    const filename = `wtb-wts-${sectionKey}${styleSuffix}${suffix}.png`;
     if(typeof captureFn === 'function'){
       const blob = await blobFromCurrentCanvas();
       if(blob) await captureFn({ filename, blob });
@@ -3598,7 +3629,7 @@ async function exportPng(scope, options){
   if(useZipExport && zipEntries.length){
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
     const zipBlob = await buildZipBlob(zipEntries);
-    await downloadBlob(zipBlob, `yoboards-export-${stamp}.zip`);
+    await downloadBlob(zipBlob, `wtb-wts-export-${stamp}.zip`);
   }
 }
 
@@ -3725,7 +3756,7 @@ async function repairImagesInSection(section){
     checked++;
 
     const currentUrl = String(entry.imageUrl || '').trim();
-    const looksProxyPng = isYoWorldInfoProxyToPng(currentUrl);
+    const looksProxyPng = isProviderInfoProxyToPng(currentUrl);
     const good = await canLoadImage(currentUrl, 4500);
     if(good && !looksProxyPng) continue;
 
@@ -3914,6 +3945,26 @@ function wireDragOnTab(btn, key){
   });
 }
 
+function formatTabCountLabel(count, singular, plural){
+  const n = Math.max(0, Number(count) || 0);
+  return n + ' ' + (n === 1 ? singular : plural);
+}
+
+function updateTabsManagerSummary(){
+  const meta = $('#tabs-meta');
+  if(!meta) return;
+
+  const hidden = Array.isArray(state?.settings?.hiddenTabs) ? state.settings.hiddenTabs : [];
+  const visibleCount = getEffectiveTabOrder().length;
+  const customCount = getCustomTabs().length;
+
+  const visibleLabel = formatTabCountLabel(visibleCount, 'visible tab', 'visible tabs');
+  const customLabel = formatTabCountLabel(customCount, 'custom tab', 'custom tabs');
+  const hiddenLabel = formatTabCountLabel(hidden.length, 'hidden tab', 'hidden tabs');
+
+  meta.textContent = `${visibleLabel} • ${customLabel} • ${hiddenLabel}`;
+}
+
 function buildTabsUI(){
   const nav = document.querySelector('.tabs');
   if(!nav) return;
@@ -4008,6 +4059,13 @@ function rebuildManageSelect(){
     }
     sel.appendChild(grp);
   }
+
+  const placeholder = sel.options[0];
+  const availableActions = visibleBuiltins.length + visibleCustom.length + hidden.length;
+  if(placeholder) placeholder.textContent = availableActions > 0 ? 'Choose tab action...' : 'No tab actions available';
+  sel.disabled = availableActions <= 0;
+
+  updateTabsManagerSummary();
 }
 
 function ensureStateSettingsContainer(targetState){
@@ -4141,13 +4199,14 @@ document.addEventListener('DOMContentLoaded', async()=>{
   await loadState();
   applyTheme(themeFromState());
   setListDensity(getListDensity());
+  initListsQuickstartCue();
   syncBuiltinPanelsFromConfig();
   buildTabsUI(); // must be before wireTabs so all tab panels exist when initial tab is restored
   // Wire tabs early so navigation works even if rendering hits a bad state.
   wireTabs();
   try{ render(); }catch(e){ console.error('render failed', e); }
 
-  // Side panel only: allow dropping YoWorld.info links to add items.
+  // Side panel only: allow dropping item links to add items.
   if(document.body?.dataset?.page === 'sidepanel'){
     wireSidePanelDrop();
   }

@@ -31,7 +31,7 @@
     const direct = s.match(/^\d{1,9}$/);
     if(direct) return Number(direct[0]) || 0;
 
-    // common yoworld.info item URL patterns
+    // common provider item URL patterns
     const m1 = s.match(/\/items\/(\d{1,9})/i) || s.match(/\bitem(?:Id)?=(\d{1,9})\b/i) || s.match(/\bid\/(\d{1,9})\b/i);
     if(m1 && m1[1]) return Number(m1[1]) || 0;
 
@@ -363,7 +363,7 @@
 
     const in1 = document.createElement('input');
     in1.type = 'text';
-    in1.placeholder = 'Paste item ID / YoWorld.info link';
+    in1.placeholder = 'Paste item ID / item link';
     in1.value = s.input || (s.itemId ? String(s.itemId) : '');
 
     const in2 = document.createElement('input');
@@ -414,7 +414,7 @@
       const raw = in1.value;
       const itemId = parseItemIdFromText(raw);
       if(!itemId){
-        setStatus('Paste a valid item ID or YoWorld.info link.');
+        setStatus('Paste a valid item ID or item link.');
         return;
       }
       setStatus('Loading item ' + itemId + '…');

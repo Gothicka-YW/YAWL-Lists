@@ -1,5 +1,5 @@
 {
-  "name": "yoboards",
+  "name": "wtb-wts",
   "private": true,
   "scripts": {
     "test": "node --test"

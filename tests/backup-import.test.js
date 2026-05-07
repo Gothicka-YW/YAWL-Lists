@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const listConfigApi = require('../list-config.js');
 
-globalThis.YoBoardsListConfig = listConfigApi;
+globalThis.WtbWtsListConfig = listConfigApi;
 if(!globalThis.document){
   globalThis.document = {
     addEventListener(){},
@@ -49,7 +49,7 @@ test('backup payload includes custom tabs and list data', () => {
 
   const payload = buildDataBackupPayload(source);
 
-  assert.equal(payload.kind, 'yo_boards_backup');
+  assert.equal(payload.kind, 'wtb_wts_backup');
   assert.equal(payload.schemaVersion, 1);
   assert.equal(payload.settings.theme, 'ocean');
   assert.equal(payload.settings.imageSource, 'auto');
@@ -65,7 +65,7 @@ test('backup payload includes custom tabs and list data', () => {
 
 test('backup parser rejects unsupported schema versions', () => {
   const unsupported = JSON.stringify({
-    kind: 'yo_boards_backup',
+    kind: 'wtb_wts_backup',
     schemaVersion: 2,
     settings: {},
     lists: {}
@@ -79,7 +79,7 @@ test('backup parser rejects unsupported schema versions', () => {
 
 test('backup parser restores built-in and custom lists safely', () => {
   const rawBackup = {
-    kind: 'yo_boards_backup',
+    kind: 'wtb_wts_backup',
     schemaVersion: 1,
     exportedAt: '2026-05-05T10:15:00.000Z',
     settings: {
@@ -121,6 +121,26 @@ test('backup parser restores built-in and custom lists safely', () => {
   assert.equal(new Set(keys).size, keys.length);
 
   assert.equal(restored.custom_ignored, undefined);
+});
+
+test('backup parser accepts legacy backup kind', () => {
+  const legacy = JSON.stringify({
+    kind: 'yo_boards_backup',
+    schemaVersion: 1,
+    settings: {
+      customTabs: [],
+      tabOrder: ['general'],
+      hiddenTabs: []
+    },
+    lists: {
+      general: [{ id: 1, name: 'Legacy Item' }]
+    }
+  });
+
+  const parsed = parseDataBackupPayloadText(legacy);
+  assert.equal(parsed.schemaVersion, 1);
+  assert.ok(Array.isArray(parsed.state.general));
+  assert.equal(parsed.state.general.length, 1);
 });
 
 test('backup round-trip preserves tab order and hidden tabs', () => {

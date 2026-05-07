@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 
 const listConfigApi = require('../list-config.js');
 
-globalThis.YoBoardsListConfig = listConfigApi;
+globalThis.WtbWtsListConfig = listConfigApi;
 if(!globalThis.document){
   globalThis.document = {
     addEventListener(){},

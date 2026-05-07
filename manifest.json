@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "YoBoards",
+  "name": "WTB & WTS",
   "version": "0.1.0",
-  "description": "YoWorld lists + board builder with user-selectable popup or side panel launch.",
+  "description": "Trading lists + board builder with user-selectable popup or side panel launch.",
   "action": {
-    "default_title": "YoBoards",
+    "default_title": "WTB & WTS",
     "default_icon": {
       "16": "Icons/16x16.png",
       "32": "Icons/32x32.png",

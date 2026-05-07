@@ -321,7 +321,7 @@ body[data-list-density="compact"] .tile{
   --tile-row-gap:4px;
 }
 
-/* === Suite module switcher (YoBoards) === */
+/* === Suite module switcher (WTB & WTS) === */
 .suite-nav{display:flex;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:10}
 .suite-tab{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:6px 10px;color:var(--text);font-weight:700}
 .suite-tab.is-active{background:var(--primary);border-color:var(--primary);color:var(--primaryText)}
@@ -332,7 +332,7 @@ body[data-list-density="compact"] .tile{
 #suite-yocollections{height:calc(100vh - 44px)}
 #yocollections-frame{width:100%;height:100%;border:0;display:block;background:var(--bg)}
 
-/* === Legacy inventory styles (unused in YoBoards) === */
+/* === Legacy inventory styles (unused in WTB & WTS) === */
 .inv-tabs{display:flex;gap:8px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--bg)}
 .inv-tab{border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:6px 10px;color:var(--text);font-weight:700}
 .inv-tab.is-active{background:var(--primary);border-color:var(--primary);color:var(--primaryText)}

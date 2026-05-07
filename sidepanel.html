@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>YoBoards</title>
+  <title>WTB &amp; WTS</title>
   <link rel="stylesheet" href="fonts.css">
   <link rel="stylesheet" href="ui.css">
 </head>
@@ -16,11 +16,15 @@
   <div id="suite-selection">
   <header class="header">
     <div>
-      <h1>YoLists</h1>
-      <div class="sub">YoBoards • Lists • Exports PNG</div>
+      <h1>WTB &amp; WTS</h1>
+      <div class="sub">WTB &amp; WTS • Lists • Export PNG</div>
       <div id="export-preview-summary" class="hint export-preview-summary" aria-live="polite"></div>
     </div>
     <div class="export-controls">
+      <div class="export-controls-head">
+        <span class="export-controls-title">Share &amp; Export</span>
+        <span class="hint">Choose scope, then export PNG.</span>
+      </div>
       <button id="btn-export" class="primary lists-export-primary" type="button">Export PNG</button>
       <div class="inline export-controls-row">
         <select id="export-scope" aria-label="Export scope">
@@ -55,48 +59,74 @@
     </div>
   </header>
 
-  <section class="card">
-    <h2>Add item</h2>
-    <div class="row">
-      <label class="lbl">Section</label>
-      <select id="in-section"></select>
+  <section id="lists-quickstart" class="card quickstart-card" aria-label="Lists quick start">
+    <div class="quickstart-head">
+      <h2>Quick Start</h2>
+      <button id="btn-lists-quickstart-dismiss" class="ghost quickstart-dismiss" type="button" aria-label="Dismiss quick start">Hide</button>
+    </div>
+    <p class="quickstart-summary">Add items, organize tabs, then export PNGs or save a full JSON backup.</p>
+    <ul class="quickstart-list">
+      <li>Use <strong>+</strong> to create custom tabs and <strong>Manage</strong> to hide or restore tabs.</li>
+      <li>Use <strong>Export PNG</strong> for share-ready images and <strong>Data Backup</strong> in Settings for restores.</li>
+      <li>Drag tabs to reorder, then drag item cards between tabs to keep lists tidy.</li>
+    </ul>
+  </section>
+
+  <section class="card lists-capture-card">
+    <h2>Add &amp; Find Items</h2>
+    <p class="card-intro">Pick a destination list, search, and add items with optional notes.</p>
+
+    <div class="capture-grid">
+      <div class="row row-tight">
+        <label class="lbl">Destination list</label>
+        <select id="in-section"></select>
+      </div>
+
+      <div class="row row-tight">
+        <label class="lbl">Note (optional)</label>
+        <input id="in-note" type="text" placeholder="e.g., 2.5m, swap for..., any color">
+      </div>
     </div>
 
     <div class="row">
-      <label class="lbl">Search</label>
-      <div class="inline">
+      <label class="lbl">Item search</label>
+      <div class="inline search-inline">
         <input id="in-query" type="text" placeholder="Type an item name...">
         <button id="btn-search" type="button">Search</button>
         <button id="btn-search-clear" class="ghost" type="button" title="Clear search">Clear</button>
       </div>
-      <div class="hint">Uses api.yoworld.info search (manual use only).</div>
+      <div class="hint">Uses item API search (manual use only).</div>
     </div>
 
-    <div class="row">
-      <label class="lbl">Note (optional)</label>
-      <input id="in-note" type="text" placeholder="e.g., 2.5m, swap for..., any color">
+    <div class="results-wrap">
+      <div class="results-head">
+        <span class="results-title">Search Results</span>
+      </div>
+      <div id="results" class="results"></div>
+
+      <div id="results-pager" class="inline" hidden>
+        <button id="btn-results-prev" class="ghost" type="button">← Prev</button>
+        <div id="results-page-label" aria-live="polite">Page 1 / 1</div>
+        <button id="btn-results-next" class="ghost" type="button">Next →</button>
+      </div>
     </div>
 
-    <div id="results" class="results"></div>
-
-    <div id="results-pager" class="inline" hidden>
-      <button id="btn-results-prev" class="ghost" type="button">← Prev</button>
-      <div id="results-page-label" aria-live="polite">Page 1 / 1</div>
-      <button id="btn-results-next" class="ghost" type="button">Next →</button>
-    </div>
-
-    <div id="drop-zone" class="dropzone" aria-label="Drop YoWorld.info link">
-      Drop a YoWorld.info item link here to add it
+    <div id="drop-zone" class="dropzone" aria-label="Drop item link">
+      Drop an item link here to add it
     </div>
   </section>
 
   <nav class="tabs" aria-label="Template Sections">
     <div class="tab-scroll-area"></div>
     <div class="tabs-tools">
+      <div class="tabs-tools-summary">
+        <span class="tabs-tools-label">Custom Tab Manager</span>
+        <span id="tabs-meta" class="tabs-meta" aria-live="polite"></span>
+      </div>
       <select id="sel-tab-manage" title="Manage tabs" aria-label="Manage tabs">
-        <option value="">&#9881; Manage</option>
+        <option value="">Choose tab action...</option>
       </select>
-      <button id="btn-add-tab" type="button" title="Add a custom list tab">+</button>
+      <button id="btn-add-tab" class="primary tabs-add-btn" type="button" title="Add a custom list tab">New tab</button>
     </div>
   </nav>
 
@@ -107,10 +137,10 @@
     <div class="row">
       <label class="lbl" for="pc-query">Search (or paste item link/ID)</label>
       <div class="inline">
-        <input id="pc-query" type="text" placeholder="e.g., 'Cupid Bow', 123456, or a YoWorld.info link">
+        <input id="pc-query" type="text" placeholder="e.g., 'Cupid Bow', 123456, or an item link">
         <button id="pc-btn-search" type="button">Search</button>
       </div>
-      <div class="hint">Uses api.yoworld.info. Pick an item and copy a “price check” message to ask other players.</div>
+      <div class="hint">Uses item API data. Pick an item and copy a “price check” message to ask other players.</div>
     </div>
     <div id="pc-results" class="results"></div>
     <div id="pc-detail" class="card" style="border:1px solid var(--border); border-radius:12px; margin-top:10px;">
@@ -177,7 +207,7 @@
     <section class="card">
       <h2>Preview</h2>
       <canvas id="bb-canvas" width="390" height="260" class="bb-canvas"></canvas>
-      <div class="hint">Actual size: 390×260 pixels (3×2 grid). Perfect for YoWorld paint boards.</div>
+      <div class="hint">Actual size: 390×260 pixels (3×2 grid). Perfect for paint-board posts.</div>
     </section>
   </div>
 
@@ -185,7 +215,7 @@
     <header class="header">
       <div>
         <h1>Settings</h1>
-        <div class="sub">YoBoards • Lists + Board Builder</div>
+        <div class="sub">WTB &amp; WTS • Lists + Board Builder</div>
       </div>
     </header>
 
@@ -231,11 +261,11 @@
       <div class="row">
         <label class="lbl" for="suite-image-source-select">Item image source</label>
         <select id="suite-image-source-select">
-          <option value="cdn">YoWorld CDN (fast, sometimes missing)</option>
-          <option value="info">YoWorld.info image link (more reliable)</option>
-          <option value="auto">Auto (CDN, fallback to YoWorld.info)</option>
+          <option value="cdn">Game CDN (fast, sometimes missing)</option>
+          <option value="info">Provider image link (more reliable)</option>
+          <option value="auto">Auto (CDN, fallback to provider image link)</option>
         </select>
-        <div class="hint">If you see broken images in Lists, switch to YoWorld.info or Auto.</div>
+        <div class="hint">If you see broken images in Lists, switch to Provider links or Auto.</div>
       </div>
 
       <div class="row">
@@ -270,7 +300,7 @@
 
     <section class="card">
       <h2>About</h2>
-      <p style="margin:0; color:var(--muted); font-size:12px;">YoBoards is a focused extension for YoWorld players with Lists, Board Builder, and synced settings.</p>
+      <p style="margin:0; color:var(--muted); font-size:12px;">WTB &amp; WTS is a focused extension for trading lists, board images, and synced settings.</p>
     </section>
   </div>
 

@@ -1,6 +1,6 @@
-# YoBoards Roadmap
+# WTB & WTS Roadmap
 
-This plan is based on the requests in `Changes.txt` and the current YoBoards codebase.
+This plan is based on the requests in `Changes.txt` and the current WTB & WTS codebase.
 
 ## Current state
 
@@ -13,7 +13,7 @@ This plan is based on the requests in `Changes.txt` and the current YoBoards cod
 
 ## Primary objective
 
-Reshape YoBoards Lists around the requested tab model, make list/export/backup behavior consistent for both built-in and custom tabs, guarantee last-known-state persistence for user changes, then harden the product for release.
+Reshape WTB & WTS Lists around the requested tab model, make list/export/backup behavior consistent for both built-in and custom tabs, guarantee last-known-state persistence for user changes, then harden the product for release.
 
 ## Persistence requirement
 
@@ -118,12 +118,12 @@ Reshape YoBoards Lists around the requested tab model, make list/export/backup b
 
 ## Phase 5: release-quality UI polish
 
-- [ ] Tighten the information hierarchy in the Lists module.
+- [x] Tighten the information hierarchy in the Lists module.
 - [ ] Reduce visual clutter in the export controls and tab management UI.
-- [ ] Improve spacing, typography, and button consistency.
-- [ ] Make custom-tab management feel intentional instead of utility-only.
-- [ ] Review popup vs sidepanel layout behavior on smaller widths.
-- [ ] Add a short onboarding/help cue for export, custom tabs, and backup.
+- [x] Improve spacing, typography, and button consistency.
+- [x] Make custom-tab management feel intentional instead of utility-only.
+- [x] Review popup vs sidepanel layout behavior on smaller widths.
+- [x] Add a short onboarding/help cue for export, custom tabs, and backup.
 
 ## Phase 6: security reality check
 

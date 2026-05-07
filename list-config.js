@@ -3,7 +3,8 @@
     module.exports = factory();
     return;
   }
-  root.YoBoardsListConfig = factory();
+  const api = factory();
+  root.WtbWtsListConfig = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function(){
   const BUILTIN_TABS = [
     { key: 'general', label: 'General', filterPlaceholder: 'Filter general items...', filterAriaLabel: 'Filter general list', exportTitle: 'General', panelType: 'generic' },
