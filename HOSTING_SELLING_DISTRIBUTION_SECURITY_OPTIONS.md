@@ -190,3 +190,99 @@ If you want low ops and fast launch:
 - Security: server-side entitlement checks + short-lived signed tokens + revocation
 
 This gives strong business protection without home hosting and without heavy infrastructure overhead.
+
+## 8. Pricing options and budget planning (estimates)
+
+Pricing changes often. Treat these as planning ranges, then verify current platform pricing pages before launch.
+
+### Hosting budget ranges (monthly)
+
+| Stack | Starter budget | Growth budget | Notes |
+|---|---:|---:|---|
+| Cloudflare Workers + D1/KV | $0 to $15 | $15 to $75 | Lowest ops overhead; good for license API and entitlement checks |
+| Supabase (Auth + DB + functions) | $0 to $25 | $25 to $150 | Fast setup with built-in auth and database |
+| Vercel Functions + managed DB | $0 to $30 | $30 to $200 | Good DX; watch bandwidth/function limits |
+| Render/Railway/Fly API service | $7 to $30 | $30 to $250 | More control, slightly more operations work |
+
+### Payment fee model options
+
+| Model | Typical fee shape | Best when |
+|---|---|---|
+| Merchant of Record (Paddle/Lemon Squeezy) | Often higher percentage + fixed fee per sale | You want tax/VAT and compliance handled for you |
+| Direct processor (Stripe) | Usually lower processor fee; you add tax/compliance stack | You want maximum control and lower processor cost |
+
+### Practical launch budget examples
+
+Assume:
+- 100 paid users in month 1
+- Low-ops serverless hosting
+- One-time extension pricing
+
+Estimated monthly non-transaction costs:
+- Lean setup: $10 to $40
+- Growth setup: $40 to $180
+
+One-time store/admin costs:
+- Chrome Web Store developer registration: one-time fee
+- Domain + email: usually low monthly cost
+
+### NH, USA business setup and operating costs (add to pricing)
+
+This is a planning guide, not legal or tax advice. Confirm current amounts and filing requirements with NH resources and a qualified tax professional.
+
+Potential one-time startup costs:
+
+| Item | Typical planning range | Notes |
+|---|---:|---|
+| NH LLC filing | $100 to $120 | Filing fee can vary by filing method and updates over time |
+| Registered agent setup | $0 to $150 | $0 if you self-serve and qualify; paid services cost more |
+| Basic legal templates/review | $0 to $600 | Depends on whether you use templates or attorney review |
+
+Potential recurring annual or monthly costs:
+
+| Item | Typical planning range | Notes |
+|---|---:|---|
+| NH annual report | About $100/year | Budget as a recurring compliance cost |
+| Registered agent service | $100 to $300/year | If you use a commercial registered agent |
+| Business banking | $0 to $25/month | Varies by bank and account type |
+| Accounting/tax prep | $300 to $2,000/year | Depends on complexity and sales volume |
+| Business insurance (optional but common) | $300 to $1,200/year | Coverage and risk profile drive cost |
+
+Tax/compliance note for planning:
+- NH does not have a broad state sales tax, but business-level NH taxes and federal tax obligations may still apply.
+- If you use a Merchant of Record, many indirect-tax tasks are simplified, but your own business taxes and reporting still remain your responsibility.
+
+### Price-point math (quick guide)
+
+If you use a fee model around `8% + $0.50` per transaction, approximate net per sale is:
+
+`net = price - (price * 0.08 + 0.50)`
+
+Examples:
+- $5.00 price -> about $4.10 net before hosting/support
+- $10.00 price -> about $8.70 net before hosting/support
+- $15.00 price -> about $13.30 net before hosting/support
+- $20.00 price -> about $17.90 net before hosting/support
+
+To include business overhead in pricing, use:
+
+net_after_fees = price - (price * processor_rate + processor_fixed)
+
+monthly_fixed_costs = hosting + business_overhead + software_tools
+
+sales_needed_for_break_even = monthly_fixed_costs / net_after_fees
+
+Quick examples (using 8% + $0.50):
+- At $12 price, net_after_fees is about $10.54.
+- If monthly_fixed_costs is $150, break-even is about 15 sales/month.
+- If monthly_fixed_costs is $350, break-even is about 34 sales/month.
+
+### Suggested pricing options to test
+
+- Early-access lifetime: $9 to $12
+- Standard lifetime: $14 to $19
+- Optional launch discount window: 20% to 35% for first adopters
+
+For WTB & WTS, a practical starting point is often:
+- Launch at around $12 to $15 lifetime
+- Re-evaluate after first 50 to 100 buyers based on support load and conversion rate
