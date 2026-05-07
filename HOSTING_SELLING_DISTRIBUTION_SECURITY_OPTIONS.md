@@ -265,9 +265,11 @@ These are the costs many solo founders forget in initial pricing.
 | Domain, DNS, and security add-ons | $1 to $25/month | Domain renewal, DNS features, optional WAF add-ons |
 | Refunds and chargebacks reserve | 3% to 12% of gross revenue | Normal payment risk and disputes |
 | Fraud/abuse overhead | 1% to 5% of gross revenue | Shared keys, suspicious activations, manual review time |
-| Marketing and creative spend | $0 to $500+/month | Listings, creatives, launch promos, optional ads |
+| Marketing and creative spend | $0 to $150/month | For YoTopia-sized markets, community posts/listing polish often replace paid ads |
 | Contractor or design help | $0 to $1,000+/month | Logo/UI copy, legal edits, implementation help |
 | Device/browser testing budget | $0 to $50/month | Extra profiles/devices for release regression checks |
+
+For a niche YoTopia audience, a reasonable baseline is paid advertising = $0 and community-led discovery (forum presence, creator relationships, and store listing quality).
 
 ### Maintenance workload and founder time cost
 
@@ -300,6 +302,9 @@ venture_viable_if = monthly_net_revenue_after_processor_fees > true_monthly_cost
 Suggested profit buffer for planning:
 - Minimum: 15%
 - Safer target: 25% to 35%
+
+Niche-market planning tip:
+- Set marketing_baseline to $0 in early models, then add a small test budget only if organic/community channels stall.
 
 ### Price-point math (quick guide)
 
