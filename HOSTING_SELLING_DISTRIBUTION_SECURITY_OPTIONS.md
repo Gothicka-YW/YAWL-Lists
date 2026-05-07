@@ -263,6 +263,7 @@ These are the costs many solo founders forget in initial pricing.
 | Monitoring and alerting | $0 to $80/month | Uptime checks, error tracking, API alerts |
 | Logging and data retention | $0 to $50/month | Audit trails for license abuse and troubleshooting |
 | Domain, DNS, and security add-ons | $1 to $25/month | Domain renewal, DNS features, optional WAF add-ons |
+| AI design tooling | $0 to $100/month | Image/logo generation and editing subscriptions for brand assets |
 | Refunds and chargebacks reserve | 3% to 12% of gross revenue | Normal payment risk and disputes |
 | Fraud/abuse overhead | 1% to 5% of gross revenue | Shared keys, suspicious activations, manual review time |
 | Marketing and creative spend | $0 to $150/month | For YoTopia-sized markets, community posts/listing polish often replace paid ads |
@@ -270,6 +271,19 @@ These are the costs many solo founders forget in initial pricing.
 | Device/browser testing budget | $0 to $50/month | Extra profiles/devices for release regression checks |
 
 For a niche YoTopia audience, a reasonable baseline is paid advertising = $0 and community-led discovery (forum presence, creator relationships, and store listing quality).
+
+### AI-generated logo and graphics considerations
+
+If you use AI for logo/graphic design, include these checks in your process and budget:
+
+- Confirm your AI tool license allows commercial use for generated assets.
+- Avoid prompts that reference living artists, existing game brands, or trademarked logos.
+- Keep generation records (tool, date, prompt, output files) for provenance.
+- Run a quick trademark and reverse-image similarity check before finalizing your brand mark.
+- Budget for final cleanup/vector polish and optional legal review before public launch.
+
+Practical cost impact:
+- AI can lower contractor spend, but it does not remove legal review risk for brand identity assets.
 
 ### Maintenance workload and founder time cost
 
