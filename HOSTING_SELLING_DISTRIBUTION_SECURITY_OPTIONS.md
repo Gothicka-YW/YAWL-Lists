@@ -252,6 +252,55 @@ Tax/compliance note for planning:
 - NH does not have a broad state sales tax, but business-level NH taxes and federal tax obligations may still apply.
 - If you use a Merchant of Record, many indirect-tax tasks are simplified, but your own business taxes and reporting still remain your responsibility.
 
+### Other expenses that commonly appear after launch
+
+These are the costs many solo founders forget in initial pricing.
+
+| Category | Typical planning range | Why it appears |
+|---|---:|---|
+| Customer support tooling | $0 to $60/month | Shared inbox/helpdesk/chat and ticket tracking |
+| Transactional email service | $0 to $30/month | License emails, receipts, password/reset flows |
+| Monitoring and alerting | $0 to $80/month | Uptime checks, error tracking, API alerts |
+| Logging and data retention | $0 to $50/month | Audit trails for license abuse and troubleshooting |
+| Domain, DNS, and security add-ons | $1 to $25/month | Domain renewal, DNS features, optional WAF add-ons |
+| Refunds and chargebacks reserve | 3% to 12% of gross revenue | Normal payment risk and disputes |
+| Fraud/abuse overhead | 1% to 5% of gross revenue | Shared keys, suspicious activations, manual review time |
+| Marketing and creative spend | $0 to $500+/month | Listings, creatives, launch promos, optional ads |
+| Contractor or design help | $0 to $1,000+/month | Logo/UI copy, legal edits, implementation help |
+| Device/browser testing budget | $0 to $50/month | Extra profiles/devices for release regression checks |
+
+### Maintenance workload and founder time cost
+
+Even if cash costs are low, your time is a real operating expense.
+
+Typical solo-maintainer workload after launch:
+- Light month: 6 to 12 hours (support, bug fixes, release prep)
+- Moderate month: 12 to 25 hours
+- Heavy month: 25+ hours (major updates, payment/license incidents)
+
+If you assign your time an internal rate (for example $35 to $75/hour), monthly labor cost can easily exceed hosting spend.
+
+Example:
+- 15 hours/month at $50/hour -> $750/month implied labor cost
+
+### True monthly operating cost model
+
+Use this fuller model to decide if the venture is worth the hassle:
+
+fixed_cash_costs = hosting + SaaS_tools + business_admin + compliance + marketing_baseline
+
+variable_reserve = gross_revenue * (refund_rate + chargeback_rate + fraud_rate)
+
+founder_labor_cost = maintenance_hours * internal_hourly_rate
+
+true_monthly_cost = fixed_cash_costs + variable_reserve + founder_labor_cost
+
+venture_viable_if = monthly_net_revenue_after_processor_fees > true_monthly_cost + desired_profit_buffer
+
+Suggested profit buffer for planning:
+- Minimum: 15%
+- Safer target: 25% to 35%
+
 ### Price-point math (quick guide)
 
 If you use a fee model around `8% + $0.50` per transaction, approximate net per sale is:
@@ -276,6 +325,8 @@ Quick examples (using 8% + $0.50):
 - At $12 price, net_after_fees is about $10.54.
 - If monthly_fixed_costs is $150, break-even is about 15 sales/month.
 - If monthly_fixed_costs is $350, break-even is about 34 sales/month.
+
+If you include labor and risk reserves, break-even can be materially higher than hosting-only math.
 
 ### Suggested pricing options to test
 
