@@ -35,7 +35,7 @@
       'prored',
       'emerald'
     ];
-    return known.includes(migrated) ? migrated : 'classic';
+    return known.includes(migrated) ? migrated : 'ocean';
   }
 
   function normalizeImageSource(value) {

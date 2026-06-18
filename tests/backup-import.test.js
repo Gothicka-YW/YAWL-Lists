@@ -147,7 +147,7 @@ test('backup parser restores built-in and custom lists safely', () => {
   const restored = parsed.state;
 
   assert.equal(parsed.schemaVersion, 1);
-  assert.equal(restored.settings.theme, 'classic');
+  assert.equal(restored.settings.theme, 'ocean');
   assert.equal(restored.settings.imageSource, 'cdn');
   assert.equal(restored.settings.allowCopyText, true);
   assert.deepEqual(restored.settings.customTabs, [

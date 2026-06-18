@@ -99,7 +99,7 @@ function defaultState(){
   return {
     ...createBuiltinListState(),
     settings: {
-      theme: 'classic',
+      theme: 'ocean',
       imageSource: 'cdn', // 'cdn' | 'info' | 'auto'
       allowCopyText: false,  // allow text selection on item cards
       customTabs: [],         // user-created custom list tabs
@@ -428,7 +428,7 @@ function normalizeThemeValue(theme){
   if(t === 'arcane') return 'naturefantasy';
   if(t === 'cyberpunk' || t === 'midnight') return 'dark';
   if(t === 'cherryblossom') return 'prored';
-  return isKnownThemeValue(t) ? t : 'classic';
+  return isKnownThemeValue(t) ? t : 'ocean';
 }
 
 function themeFromState(){

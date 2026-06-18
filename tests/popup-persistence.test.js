@@ -44,7 +44,7 @@ test('defaultState provides complete built-in and settings defaults', () => {
   }
 
   assert.deepEqual(s.settings, {
-    theme: 'classic',
+    theme: 'ocean',
     imageSource: 'cdn',
     allowCopyText: false,
     customTabs: [],
