@@ -1,10 +1,9 @@
-const SYNC_KEY = 'yo_boards_sync_v1';
-const LOCAL_KEY = 'yo_boards_local_v1';
-const SYNC_SETTINGS_KEY = 'yo_boards_sync_settings_v1';
-const LIST_DENSITY_SESSION_KEY = 'yo_boards_list_density_v1';
-const LISTS_QUICKSTART_DISMISSED_KEY = 'yo_boards_lists_quickstart_dismissed_v1';
+const SYNC_KEY = 'yawl_lists_sync_v1';
+const LOCAL_KEY = 'yawl_lists_local_v1';
+const SYNC_SETTINGS_KEY = 'yawl_lists_sync_settings_v1';
+const LIST_DENSITY_SESSION_KEY = 'yawl_lists_list_density_v1';
+const LISTS_QUICKSTART_DISMISSED_KEY = 'yawl_lists_lists_quickstart_dismissed_v1';
 const BACKUP_KIND = 'wtb_wts_backup';
-const LEGACY_BACKUP_KIND = 'yo_boards_backup';
 
 const listConfigApi = globalThis.WtbWtsListConfig;
 if(!listConfigApi) throw new Error('WtbWtsListConfig is not loaded.');
@@ -127,10 +126,10 @@ let syncSettingsRetryTimer = 0;
 let syncSettingsRetryAt = 0;
 let syncSettingsWriteInFlight = false;
 
-const ACTIVE_TAB_KEY = 'yo_boards_active_tab_v1';
-const TAB_DRAFTS_KEY = 'yo_boards_tab_drafts_v1';
+const ACTIVE_TAB_KEY = 'yawl_lists_active_tab_v1';
+const TAB_DRAFTS_KEY = 'yawl_lists_tab_drafts_v1';
 
-const PRICE_NOTES_KEY = 'yo_boards_price_notes_v1';
+const PRICE_NOTES_KEY = 'yawl_lists_price_notes_v1';
 
 function normalizeTagList(input){
   const raw = (typeof input === 'string') ? input : Array.isArray(input) ? input.join(',') : '';
@@ -2734,7 +2733,7 @@ function parseDataBackupPayloadText(text){
   }
 
   const kind = String(parsed.kind || '').trim();
-  if(kind !== BACKUP_KIND && kind !== LEGACY_BACKUP_KIND){
+  if(kind !== BACKUP_KIND){
     throw new Error('This is not a WTB & WTS backup file.');
   }
 
@@ -3479,7 +3478,7 @@ async function exportPng(scope, options){
       : (isWish
         ? (pageHasAnyNote ? TILE_H_WISH_WITH_NOTE : TILE_H_WISH_NO_NOTE)
         : (pageHasAnyNote ? TILE_H_DEFAULT_WITH_NOTE : TILE_H_DEFAULT_NO_NOTE));
-    // If tags are disabled, reclaim the badge area to keep images tighter for paint boards.
+    // If tags are disabled, reclaim the badge area to keep images tighter.
     const tileH = Math.max(138, tileHBase + (includeStoreTags ? 0 : (isWish ? -22 : -28)));
     const height = pagePad + headerH + rows * tileH + (rows-1)*pageGap + pagePad;
 
@@ -3499,7 +3498,7 @@ async function exportPng(scope, options){
 
     ctx.textBaseline = 'top';
 
-    // No title/header text in exported PNGs (paint-board friendly)
+    // No title/header text in exported PNGs.
     const y = pagePad;
     for(let r=0; r<rows; r++){
       for(let c=0; c<cols; c++){
@@ -3971,7 +3970,6 @@ function syncCustomTabDropdowns(){
     ...allListTabs.map((tab)=> ({ value: tab.key, label: tab.label }))
   ], $('#export-scope')?.value || 'active');
   replaceSelectOptions($('#in-section'), allListTabs.map((tab)=> ({ value: tab.key, label: tab.label })), $('#in-section')?.value || getActiveTab() || DEFAULT_TAB_KEY);
-  replaceSelectOptions($('#bb-fill-list'), allListTabs.map((tab)=> ({ value: tab.key, label: tab.label })), $('#bb-fill-list')?.value || DEFAULT_TAB_KEY);
   updateExportPreviewSummary();
 }
 

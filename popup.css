@@ -202,23 +202,6 @@ button:hover{background:var(--surface2)}
 
 .hint{margin-top:4px;color:var(--muted);font-size:11px}
 
-/* --- Board Builder --- */
-.bb-slots{display:grid;grid-template-columns:1fr;gap:10px}
-@media (min-width: 520px){
-  body[data-page="sidepanel"] .bb-slots{grid-template-columns:1fr 1fr 1fr}
-}
-
-.bb-slot{border:1px solid var(--border);border-radius:12px;padding:10px;background:var(--surface)}
-.bb-slot-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.bb-slot-title{font-weight:600;font-size:12px}
-.bb-slot-preview{display:flex;gap:10px;align-items:flex-start}
-.bb-thumb{width:96px;height:64px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);overflow:hidden;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
-.bb-thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.bb-slot-fields{flex:1 1 auto;min-width:0}
-.bb-slot-fields input{margin-bottom:6px}
-
-.bb-canvas{width:390px;height:260px;border:1px solid var(--border);border-radius:12px;background:var(--surface);display:block;image-rendering:high-quality;image-rendering:-webkit-optimize-contrast}
-
 .dropzone{margin-top:10px;padding:10px 12px;border:2px dashed var(--border);border-radius:12px;background:color-mix(in srgb, var(--surface) 75%, transparent);color:var(--muted);font-size:12px;user-select:none}
 .dropzone.is-over{border-color:var(--primary);color:var(--text)}
 .dropzone.is-success{border-color:#16a34a;color:#166534;background:color-mix(in srgb, #16a34a 12%, var(--surface))}

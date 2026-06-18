@@ -1,10 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "WTB & WTS",
-  "version": "0.1.0",
-  "description": "Trading lists + board builder with user-selectable popup or side panel launch.",
+  "name": "YAWL Lists",
+  "version": "1.0.0",
+  "version_name": "v1.0",
+  "description": "Trading lists with side panel launch by default.",
   "action": {
-    "default_title": "WTB & WTS",
+    "default_title": "YAWL Lists",
     "default_icon": {
       "16": "Icons/16x16.png",
       "32": "Icons/32x32.png",

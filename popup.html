@@ -9,7 +9,6 @@
 <body data-page="sidepanel" data-surface="popup">
   <nav class="suite-nav" aria-label="Suite modules">
     <button id="suite-nav-selection" class="suite-tab is-active" type="button" data-suite-module="selection">Lists</button>
-    <button id="suite-nav-boardbuilder" class="suite-tab" type="button" data-suite-module="boardbuilder">Board Builder</button>
     <button id="suite-nav-settings" class="suite-tab" type="button" data-suite-module="settings">Settings</button>
   </nav>
 
@@ -166,56 +165,11 @@
 
   </div>
 
-  <div id="suite-boardbuilder" hidden>
-    <header class="header">
-      <div>
-        <h1>Board Builder</h1>
-        <div class="sub">3×2 board • Pull from lists • Export PNG</div>
-      </div>
-      <div class="inline" style="flex-wrap:wrap; justify-content:flex-end;">
-        <button id="bb-btn-export" class="primary" type="button">Export PNG</button>
-        <button id="bb-btn-copy" class="ghost" type="button">Copy PNG</button>
-        <button id="bb-btn-clear" class="ghost" type="button">Clear</button>
-      </div>
-    </header>
-
-    <section class="card">
-      <h2>Quick Fill</h2>
-      <div class="row">
-        <label class="lbl">From list</label>
-        <div class="inline" style="flex-wrap:wrap;">
-          <select id="bb-fill-list" aria-label="List">
-          </select>
-          <input id="bb-fill-start" type="number" min="1" step="1" value="1" style="width:120px" aria-label="Start index" />
-          <label class="inline" style="gap:6px;">
-            <input id="bb-fill-use-notes" type="checkbox" style="width:auto;" />
-            <span style="color:var(--muted); font-size:11px;">Use list notes as captions</span>
-          </label>
-          <button id="bb-btn-fill" type="button">Fill 6 Slots</button>
-          <button id="bb-btn-fill-next" type="button">Fill Next 6 Slots</button>
-        </div>
-        <div class="hint">Uses your saved Lists data. Start index is 1-based.</div>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Slots</h2>
-      <div class="bb-slots" id="bb-slots"></div>
-      <div id="bb-status" class="hint" aria-live="polite"></div>
-    </section>
-
-    <section class="card">
-      <h2>Preview</h2>
-      <canvas id="bb-canvas" width="390" height="260" class="bb-canvas"></canvas>
-      <div class="hint">Actual size: 390×260 pixels (3×2 grid). Perfect for paint-board posts.</div>
-    </section>
-  </div>
-
   <div id="suite-settings" hidden>
     <header class="header">
       <div>
         <h1>Settings</h1>
-        <div class="sub">WTB &amp; WTS • Lists + Board Builder</div>
+        <div class="sub">WTB &amp; WTS • Lists</div>
       </div>
     </header>
 
@@ -298,12 +252,11 @@
 
     <section class="card">
       <h2>About</h2>
-      <p style="margin:0; color:var(--muted); font-size:12px;">WTB &amp; WTS is a focused extension for trading lists and paint board images. This is a fan tool and is not affiliated with Big Viking Games or YoWorld/YoTopia.</p>
+      <p style="margin:0; color:var(--muted); font-size:12px;">WTB &amp; WTS is a focused extension for trading and wish lists. This is a fan tool and is not affiliated with Big Viking Games or YoWorld/YoTopia.</p>
       <p style="margin:6px 0 0; color:var(--muted); font-size:12px;">Privacy Policy (Privacy Policy will be a link to the file when made)</p>
     </section>
   </div>
 
-  <script src="boardbuilder.js"></script>
   <script src="suite-lite.js"></script>
 </body>
 </html>

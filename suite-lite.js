@@ -1,15 +1,15 @@
 (function () {
-  const MODULE_KEY = 'yo_boards_active_module_v1';
-  const LOCAL_KEY = 'yo_boards_local_v1';
-  const SYNC_SETTINGS_KEY = 'yo_boards_sync_settings_v1';
-  const UI_PREFS_KEY = 'yo_boards_ui_prefs_v1';
+  const MODULE_KEY = 'yawl_lists_active_module_v1';
+  const LOCAL_KEY = 'yawl_lists_local_v1';
+  const SYNC_SETTINGS_KEY = 'yawl_lists_sync_settings_v1';
+  const UI_PREFS_KEY = 'yawl_lists_ui_prefs_v1';
 
   function qs(sel) {
     return document.querySelector(sel);
   }
 
   function normalizeModule(value) {
-    return (value === 'selection' || value === 'boardbuilder' || value === 'settings')
+    return (value === 'selection' || value === 'settings')
       ? value
       : 'selection';
   }
@@ -62,19 +62,15 @@
     const module = normalizeModule(moduleName);
 
     const selectionRoot = qs('#suite-selection');
-    const boardBuilderRoot = qs('#suite-boardbuilder');
     const settingsRoot = qs('#suite-settings');
 
     if (selectionRoot) selectionRoot.hidden = module !== 'selection';
-    if (boardBuilderRoot) boardBuilderRoot.hidden = module !== 'boardbuilder';
     if (settingsRoot) settingsRoot.hidden = module !== 'settings';
 
     const btnSelection = qs('#suite-nav-selection');
-    const btnBoardBuilder = qs('#suite-nav-boardbuilder');
     const btnSettings = qs('#suite-nav-settings');
 
     if (btnSelection) btnSelection.classList.toggle('is-active', module === 'selection');
-    if (btnBoardBuilder) btnBoardBuilder.classList.toggle('is-active', module === 'boardbuilder');
     if (btnSettings) btnSettings.classList.toggle('is-active', module === 'settings');
 
     try {
@@ -378,7 +374,6 @@
 
   function wireModuleNavigation() {
     qs('#suite-nav-selection')?.addEventListener('click', () => setActiveModule('selection'));
-    qs('#suite-nav-boardbuilder')?.addEventListener('click', () => setActiveModule('boardbuilder'));
     qs('#suite-nav-settings')?.addEventListener('click', () => setActiveModule('settings'));
   }
 

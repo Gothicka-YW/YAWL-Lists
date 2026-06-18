@@ -1,4 +1,4 @@
-const UI_PREFS_KEY = 'yo_boards_ui_prefs_v1';
+const UI_PREFS_KEY = 'yawl_lists_ui_prefs_v1';
 
 function normalizeSurface(value) {
   return value === 'popup' ? 'popup' : 'sidepanel';

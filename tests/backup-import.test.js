@@ -13,7 +13,8 @@ if(!globalThis.document){
 
 const {
   buildDataBackupPayload,
-  parseDataBackupPayloadText
+  parseDataBackupPayloadText,
+  applyCreateCustomTabState
 } = require('../popup.js');
 
 function makeState(overrides){
@@ -86,6 +87,24 @@ test('backup payload includes user custom list buckets even if metadata is missi
   assert.deepEqual(payload.settings.customTabs, [{ key: 'custom_missingmeta', label: 'Missingmeta' }]);
 });
 
+test('backup payload includes newly created custom lists before they have items', () => {
+  const source = makeState();
+  const sectionFilters = {};
+
+  const created = applyCreateCustomTabState(source, sectionFilters, 'custom_new_wishes', 'New Wishes');
+  assert.equal(created, true);
+
+  const payload = buildDataBackupPayload(source);
+  assert.deepEqual(payload.settings.customTabs, [{ key: 'custom_new_wishes', label: 'New Wishes' }]);
+  assert.ok(Array.isArray(payload.lists.custom_new_wishes));
+  assert.equal(payload.lists.custom_new_wishes.length, 0);
+
+  const parsed = parseDataBackupPayloadText(JSON.stringify(payload));
+  assert.deepEqual(parsed.state.settings.customTabs, [{ key: 'custom_new_wishes', label: 'New Wishes' }]);
+  assert.ok(Array.isArray(parsed.state.custom_new_wishes));
+  assert.equal(parsed.state.custom_new_wishes.length, 0);
+});
+
 test('backup parser rejects unsupported schema versions', () => {
   const unsupported = JSON.stringify({
     kind: 'wtb_wts_backup',
@@ -148,26 +167,6 @@ test('backup parser restores built-in and custom lists safely', () => {
 
   assert.ok(Array.isArray(restored.custom_ignored));
   assert.equal(restored.custom_ignored.length, 1);
-});
-
-test('backup parser accepts legacy backup kind', () => {
-  const legacy = JSON.stringify({
-    kind: 'yo_boards_backup',
-    schemaVersion: 1,
-    settings: {
-      customTabs: [],
-      tabOrder: ['general'],
-      hiddenTabs: []
-    },
-    lists: {
-      general: [{ id: 1, name: 'Legacy Item' }]
-    }
-  });
-
-  const parsed = parseDataBackupPayloadText(legacy);
-  assert.equal(parsed.schemaVersion, 1);
-  assert.ok(Array.isArray(parsed.state.general));
-  assert.equal(parsed.state.general.length, 1);
 });
 
 test('backup round-trip preserves tab order and hidden tabs', () => {

@@ -15,6 +15,7 @@ const {
   exportSectionsForScope,
   normalizeSettingsFromStorage,
   normalizeStateFromStorage,
+  applyCreateCustomTabState,
   setStateForTests
 } = require('../popup.js');
 
@@ -61,6 +62,21 @@ test('export scope generation includes custom tabs and handles invalid scopes', 
 
   const activeFallback = exportSectionsForScope('active');
   assert.deepEqual(activeFallback, [{ key: 'general', title: 'General' }]);
+});
+
+test('export scope generation includes newly created custom tabs', () => {
+  const state = makeBaseState();
+  const sectionFilters = {};
+  const created = applyCreateCustomTabState(state, sectionFilters, 'custom_new_wishes', 'New Wishes');
+  assert.equal(created, true);
+
+  setStateForTests(state);
+
+  const all = exportSectionsForScope('all');
+  assert.ok(all.some((section) => section.key === 'custom_new_wishes' && section.title === 'New Wishes'));
+  assert.deepEqual(exportSectionsForScope('custom_new_wishes'), [
+    { key: 'custom_new_wishes', title: 'New Wishes' }
+  ]);
 });
 
 test('built-in export scope stays aligned with renamed and split tab set', () => {
